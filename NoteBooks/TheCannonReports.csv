@@ -1,0 +1,5 @@
+# of Stars,test %,Seed #,Telluric,MSE T_{eff},MSE log g,MSE vsini,MSE [Fe/H],Notes
+733,20,32,TRUE,47732.962,0.176908518,7.353965065,0.012286501,average shift of 16 echelle orders
+733,20,32,FALSE,47428.70132,0.173665703,7.360702584,0.011829115,average shift of 16 echelle orders
+733,20,32,TRUE,44894.41869,0.166645094,8.260018848,0.012202478,only the 3rd echelle order for shift
+733,20,32,FALSE,43887.02733,0.161969455,8.293099301,0.011794665,only the 3rd echelle order for shift
