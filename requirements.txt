@@ -7,3 +7,6 @@ specutils==1.1.1
 TheCannon==0.7.3
 hiresprv==3.0.4
 scipy==1.5.2
+descartes==1.1.0
+matplotlib==3.3.2
+localreg==0.3.1
