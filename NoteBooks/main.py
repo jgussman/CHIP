@@ -1,3 +1,4 @@
+from alpha_shapes import * 
 from astropy import units as u
 from astropy.io import fits
 from hiresprv.auth import login
@@ -8,7 +9,8 @@ from PyAstronomy import pyasl
 from specutils.fitting import fit_generic_continuum
 from specutils.spectra import Spectrum1D
 from scipy import interpolate 
-from alpha_shapes import * 
+import time 
+
 
 import numpy as np
 import pandas as pd 
@@ -18,7 +20,8 @@ class CIR:
     def __init__(self,star_ID_array,wl_solution_path = './wl_solution.csv',
                  rvOutputPath='./RVOutput',spectraOutputPath = './SpectraOutput' ):
         '''
-        Used for reducing HIRES data to get it ready for being fed into The Cannon. 
+        Used for reducing deblazed Keck HIRES spectra for the purpose of putting the output 
+        inot The Cannon. 
 
         star_ID_array: is an array that contains strings of the HIRES ID for stars
         wl_solution_path: defaulted to ./wl_solution.csv, the file at the end of your given path
@@ -49,6 +52,11 @@ class CIR:
              Continuum Normalize ->
              CrossCorrelate -> 
              Interpolate 
+        
+        use_data:  Set to True if you have HIRES_Filename_rv.csv 
+                  populated with the stars you want from a previous run. 
+        slow_normalize: Set to True if you have a ton of time or a really fast computer.
+                        700 stars will take ~48 hours. Plus shipping and handling.
         '''
         if not use_data:
             self.Find_and_download_all_rv_obs()
@@ -67,7 +75,7 @@ class CIR:
         '''            
         Description: This method downloads the rotational velocity metadata and
         returns a dictionary that makes it easy to identify what stars' rotational 
-        velocities nearest 0 as well as the filenames for which they came from.
+        velocities nearest 0 as well as the filenames for which they came from. 
 
         Note: The dataframe produced by this method will remove all the stars that did 
               not have any RV data produced by rvcurve. This does not mean that 
@@ -208,31 +216,32 @@ class CIR:
         RV = 80 #60 gave good results 
         crossCorrelatedspectra = {} #Key: FILENAME Values: (correlated wavelength, normalized flux)
         for i in range(self.filename_rv_df.shape[0]):
-            row = self.filename_rv_df.iloc[i]
-            filename = row[1]
-            normalizedFlux = self.spectraDic[filename]
-            
-            z_list = [] #Going to take the average of all the echelle shifts 
-            for echelle_num in range(2,3): #DELETE WHEN DONE
-#             for echelle_num in range(16):
-                begin,end = 4021*echelle_num, 4021*(echelle_num+1)
-                e_wv = wl_solution[begin:end]  #hires 
-                e_flux = normalizedFlux[begin:end]
-                s_wv = solar_echelle_list[echelle_num][0]    #solar     
-                s_flux = solar_echelle_list[echelle_num][1]  
-                
-                rv, cc = pyasl.crosscorrRV(e_wv, e_flux,s_wv,s_flux, -1*RV, RV, RV/600., skipedge=numOfEdgesToSkip)
-                #maxind = np.argmax(cc) #DELETE IF CODE RUNS
-                argRV = rv[np.argmax(cc)]  #UNITS: km/s 
-            
-                z = (argRV/299_792.458) #UNITS: None 
-                z_list.append(z)
-            
-            avg_z = np.mean(z_list)    
-            computeShiftedWavelength = lambda wl: wl/ (1 + avg_z)  #UNITS: Angstroms
-            #There has to be a better way to convert to a numpy array
-            shifted_wl = np.array(list(map(computeShiftedWavelength,wl_solution)))
-            self.spectraDic[filename] = (shifted_wl,normalizedFlux)     
+            try:
+                row = self.filename_rv_df.iloc[i]
+                filename = row[1]
+                normalizedFlux = self.spectraDic[filename]
+
+                z_list = [] #Going to take the average of all the echelle shifts 
+                for echelle_num in range(15,16): #echelle orders
+    #             for echelle_num in range(16):
+                    begin,end = 4021*echelle_num, 4021*(echelle_num+1)
+                    e_wv = wl_solution[begin:end]  #hires 
+                    e_flux = normalizedFlux[begin:end]
+                    s_wv = solar_echelle_list[echelle_num][0]    #solar     
+                    s_flux = solar_echelle_list[echelle_num][1]  
+
+                    rv, cc = pyasl.crosscorrRV(e_wv, e_flux,s_wv,s_flux, -1*RV, RV, RV/200., skipedge=numOfEdgesToSkip)
+                    argRV = rv[np.argmax(cc)]  #UNITS: km/s 
+                    z = (argRV/299_792.458) #UNITS: None 
+                    z_list.append(z)
+
+                avg_z = np.mean(z_list)    
+                computeShiftedWavelength = lambda wl: wl/ (1 + avg_z)  #UNITS: Angstroms
+                #There has to be a better way to convert to a numpy array
+                shifted_wl = np.array(list(map(computeShiftedWavelength,wl_solution)))
+                self.spectraDic[filename] = (shifted_wl,normalizedFlux)    
+            except:
+                pass 
         print("Cross Correlate Has Ended")
         
 
@@ -271,6 +280,8 @@ class CIR:
         spoc_wl = spoc_wl[spoc_wl <= interpolate_over[-1]]
         
         interpolate_over = spoc_wl[::-1]
+        interpolate_over.sort()
+        
         length_interpolate = len(interpolate_over)
         
         #Interpolation         
@@ -278,15 +289,17 @@ class CIR:
         replacementIvarDic = {}
         
         for HIRESname,filename,rv in self.filename_rv_df.to_numpy():
-            wl = self.spectraDic[filename][0]
-            flux_norm = self.spectraDic[filename][1]
-            flux_func = interpolate.interp1d(wl, flux_norm)
-            ivar_func = interpolate.interp1d(wl,self.Ivar[filename])
-            
-            replacementSpectraDic[HIRESname] = flux_func(interpolate_over)
-            #Now ivar will actually become ivar 
-            replacementIvarDic[HIRESname] = 1/ivar_func(interpolate_over)**2 
-        
+            try:
+                wl = self.spectraDic[filename][0]
+                flux_norm = self.spectraDic[filename][1]
+                flux_func = interpolate.interp1d(wl, flux_norm)
+                ivar_func = interpolate.interp1d(wl,self.Ivar[filename])
+
+                replacementSpectraDic[HIRESname] = flux_func(interpolate_over)
+                #Now ivar will actually become ivar 
+                replacementIvarDic[HIRESname] = 1/ivar_func(interpolate_over)**2 
+            except:
+                pass
         if np.isnan(replacementIvarDic[HIRESname]).any(): #Happens in the ivar
                 print(f"****{HIRESname} HAS BEEN REMOVED BECAUSE IT CONTAINS NAN VALUES")
                 del replacementSpectraDic[HIRESname]
@@ -314,7 +327,7 @@ class CIR:
 
     def SigmaCalculation(self,star_name):
         '''
-        Calculates sigma for inverse variance (ivar) 
+        Description: Calculates sigma for inverse variance (ivar) 
         '''
         gain = 1.2 #electrons/ADU
         readn = 2.0 #electrons RMS
@@ -330,41 +343,52 @@ class CIR:
         
     
     def AlphaNormalization(self):
-        
+        '''
+        Description: Rolling Continuum Normalization. Takes forever and it mega worth it. 
+        '''
+        print("Alpha Normalization has Begun")
         wl_sixteen_echelle = np.ones((16,4021))
         for row in range(16):
             begin,end = 4021*row, 4021*(row+1)
             wl_sixteen_echelle[row] = self.wl_solution[begin:end]
-            
+        i = 0 #DELETE WHEN DONE  
         for star_name in self.spectraDic:
-            temp_sixteen_order_echelle = np.ones((16,4021))
-            temp_sixteen_order_echelle_sigma = np.ones((16,4021))
-            temp_spectra = self.spectraDic[star_name]
-            temp_sigma = self.Ivar[star_name]
-            for row in range(16):
-                begin,end = 4021*row, 4021*(row+1)
-                temp_sixteen_order_echelle[row] = temp_spectra[begin:end]
-                temp_sixteen_order_echelle_sigma[row] = temp_sigma[begin:end]
-            contfit_alpha_hull(star_name,
-                               temp_sixteen_order_echelle,
-                               temp_sixteen_order_echelle_sigma,
-                               wl_sixteen_echelle,"./Normalized_Spectra/")
-            #Should change ./Normalized_Spectra/ to be where the user can set it but that is okay :D 
-            #**FIX THIS FOR FINAL DRAFT 
-            self.spectraDic[star_name] = np.load(f"Normalized_Spectra/{star_name}_specnorm.npy").flatten()
-            self.Ivar[star_name] = np.load(f"Normalized_Spectra/{star_name}_sigmanorm.npy").flatten()
+            try: #This is so the program doesn't have to redo the same stars over and over again
+                normed_spectra = np.load(f"Normalized_Spectra/{star_name}_specnorm.npy").flatten()
+                self.spectraDic[star_name] = normed_spectra
+                self.Ivar[star_name] = np.load(f"Normalized_Spectra/{star_name}_sigmanorm.npy").flatten()
+            except:
+                temp_sixteen_order_echelle = np.ones((16,4021))
+                temp_sixteen_order_echelle_sigma = np.ones((16,4021))
+                temp_spectra = self.spectraDic[star_name]
+                temp_sigma = self.Ivar[star_name]
+                for row in range(16):
+                    begin,end = 4021*row, 4021*(row+1)
+                    temp_sixteen_order_echelle[row] = temp_spectra[begin:end]
+                    temp_sixteen_order_echelle_sigma[row] = temp_sigma[begin:end]
+                contfit_alpha_hull(star_name,
+                                   temp_sixteen_order_echelle,
+                                   temp_sixteen_order_echelle_sigma,
+                                   wl_sixteen_echelle,"./Normalized_Spectra/")
+                try:
+                    #Should change ./Normalized_Spectra/ to be where the user can set it but that is okay :D 
+                    #**FIX THIS FOR FINAL DRAFT 
+                    self.spectraDic[star_name] = np.load(f"Normalized_Spectra/{star_name}_specnorm.npy").flatten()
+                    self.Ivar[star_name] = np.load(f"Normalized_Spectra/{star_name}_sigmanorm.npy").flatten()
+                except:
+                    print(f'''Something with wrong with {star_name}'s normalization.
+                             We have removed it...''')
+                    del self.spectraDic[star_name]
+                    del self.Ivar[star_name]
+        print("Alpha Normalization has Begun")
+         
 
-#         norm_fluxes = pd.DataFrame(self.spectraDic)
-#         norm_fluxes.to_csv("norm_fluxes.csv",index_label=False,index=False)
-#         norm_ivars = pd.DataFrame(self.Ivar)
-#         norm_ivars.to_csv("norm_ivars.csv",index_label=False,index=False)
     def NoDownload(self):
         '''
-        Need to have spectra already downloaded and HIRES_Filename_rv.csv needs to be made already.
+        Description: Need to have spectra already downloaded and HIRES_Filename_rv.csv needs to be made already.
         Only made this method because the internet at my parents house is extremely poor. 1.1 mbs 
         '''
-        hires = np.genfromtxt("HIRES_Filename_rv.csv",delimiter=',',usecols=(0),skip_header=1,dtype='str')
-        file = np.genfromtxt("HIRES_Filename_rv.csv",delimiter=',',usecols=(1),skip_header=1,dtype='str')
+        hires,file = np.genfromtxt("HIRES_Filename_rv.csv",delimiter=',',usecols=(0,1),skip_header=1,dtype='str',unpack = True)
         rv = np.genfromtxt("HIRES_Filename_rv.csv",delimiter=',',usecols=(2),skip_header=1)
         self.filename_rv_df = pd.DataFrame({"HIRESName":hires,'FILENAME':file,"RV":rv})
         download_Location = self.dataSpectra.localdir #This is the second parameter of hiresprv.download.Download
@@ -381,13 +405,13 @@ class CIR:
                 self.SigmaCalculation(filename)
             except OSError: #More of a problem with fits but that is okay
                 print(f"{filename} has a problem with it's spectra")
-        print("Completed Getting The dAtA")
-    
-import time 
+        print("Completed Getting The dAtA")             
+            
+
 if __name__ == '__main__':
     start_time = time.time()
     crossMatchedNames = pd.read_csv("../spocData/starnames_crossmatch_SPOCS_NEXSCI.txt",sep=" ")
     cirObject = CIR(crossMatchedNames["HIRES"].to_numpy(),'./wl_solution.csv','./RVOutput','./SpectraOutput')
-    cirObject.Run(True,True)
+    cirObject.Run(False,False)
     time_elap = time.time() - start_time 
     print(f"This took {time_elap/60} minutes!")
