@@ -1,4 +1,3 @@
-from alpha_shapes import * 
 from astropy import units as u
 from astropy.io import fits
 from hiresprv.auth import login
@@ -9,8 +8,7 @@ from PyAstronomy import pyasl
 from specutils.fitting import fit_generic_continuum
 from specutils.spectra import Spectrum1D
 from scipy import interpolate 
-import time 
-
+from alpha_shapes import * 
 
 import numpy as np
 import pandas as pd 
@@ -198,8 +196,9 @@ class CIR:
         '''
         print("Cross Correlate Has Began")
         wl_solution = np.genfromtxt('./wl_solution.csv',skip_header=2) #UNITS: Angstrom
-        wvlen,c = np.genfromtxt("../Atlases/solarAtlas.txt",skip_header=1,usecols=(1,4),unpack=True) 
-        wvlen, c = wvlen[::-1], c[::-1]
+        solar = np.load('../Constants/solarAtlas.npy')
+        wvlen = solar[:,1][::-1]
+        c = solar[:,4][::-1]
         
         solar_echelle_list = []
         for echelle_num in range(16):
@@ -314,9 +313,10 @@ class CIR:
         #Saving Data
         np.savetxt("interpolated_wl.csv",interpolate_over,delimiter=",",header='wavelength(Angstrom)')
         fluxDF = pd.DataFrame(self.spectraDic)
-        fluxDF.to_csv("fluxes_for_HIRES.csv",index_label=False,index=False)
+        np.save("stellar_names_for_flux_and_ivar",np.array(fluxes_for_HIRES.columns))
+        np.save("fluxes_for_HIRES",fluxDF.to_numpy())
         ivarDF = pd.DataFrame(self.Ivar)
-        ivarDF.to_csv("ivar_for_HIRES.csv",index_label=False,index=False)
+        np.save("ivars_for_HIRES",ivarDF.to_numpy())
 
         #This might be confusing to now make self.Ivar a dataframe when it was 
         #just a dictionary, but thats okay. Don't want to make too many variables.
@@ -406,12 +406,11 @@ class CIR:
             except OSError: #More of a problem with fits but that is okay
                 print(f"{filename} has a problem with it's spectra")
         print("Completed Getting The dAtA")             
-            
-
+import time 
 if __name__ == '__main__':
     start_time = time.time()
     crossMatchedNames = pd.read_csv("../spocData/starnames_crossmatch_SPOCS_NEXSCI.txt",sep=" ")
     cirObject = CIR(crossMatchedNames["HIRES"].to_numpy(),'./wl_solution.csv','./RVOutput','./SpectraOutput')
-    cirObject.Run(False,False)
+    cirObject.Run(True,True)
     time_elap = time.time() - start_time 
     print(f"This took {time_elap/60} minutes!")
