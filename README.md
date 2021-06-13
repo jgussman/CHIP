@@ -3,13 +3,12 @@ Step 1: Clone the repo
 Step 2: In your terminal cd to the cloned repo. Mind you this program was only tested on python 3.8.5, it probably works for all python 3.8 but I'm not positive. Create a virutal envorment if you so please. Now with what ever python verison you are using (lets say it is the default python3) type in the terminal 
 
 
-```
-pip install -r requirements.txt``` 
+```pip install -r requirements.txt``` 
+
 
 or 
 
-```
-pip3 install -r requirements.txt```
+```pip3 install -r requirements.txt```
 
 Step 3: Now you can open up your IDE of choice, and choose either main.py or main.ipynd to run the pipeline. I suggest Jupyter Notebook. 
 
