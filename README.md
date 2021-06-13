@@ -4,7 +4,10 @@ Step 2: In your terminal cd to the cloned repo. Mind you this program was only t
 
 
 ```{python}
-pip install -r requirements.txt``` or 
+pip install -r requirements.txt``` 
+
+or 
+
 ```{python}
 pip3 install -r requirements.txt```
 
