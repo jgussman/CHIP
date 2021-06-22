@@ -13,9 +13,9 @@ or
 
 ```pip3 install -r requirements.txt```
 
-Step 3: cd into the Notebooks folder and now open main.ipynb using Jupyter Notebook. If you rather use a .py file simiply copy all the contents of the notebooks to a .py file. 
+Step 3: cd into the ScriptsAndData folder and now open main_pipeline.py.  
 
-Step 4: In the main file, scroll to the second cell and locate the if statemate
+Step 4: In the main_pipeline script, scroll to the second cell and locate the if statemate
 
 ```
 if __name__ == '__main__':
@@ -43,4 +43,4 @@ Example: If I wanted to use Alpha normalization but not data from my past run of
 
 Step 5: Now you can run all the cells. 
 
-Step 6: Once the pipeline is completed open main_The_Cannon.ipynd. You should be able to excute the whole notebook without problems. As soon as the program has completed you can open up TheCannonReports.csv to check the results of the last run. You can also go into the Element_Pictures folder to look at a visual representation of how The Cannon did with the testing set. 
+Step 6: Once the pipeline is completed open main_The_Cannon.py. You should be able to excute the whole script without problems. As soon as the program has completed you can open up TheCannonReports.csv to check the results of the last run. You can also go into the Element_Pictures folder to look at a visual representation of how The Cannon did with the testing set. 
