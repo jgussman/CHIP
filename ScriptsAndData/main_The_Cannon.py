@@ -11,7 +11,7 @@ from scipy import stats
 wl = np.genfromtxt("interpolated_wl.csv",skip_header=1)[::-1]
 
 ID_and_flux = np.load("fluxes_for_HIRES.npy")
-ivar = np.load("ivar_for_HIRES.npy")
+ivar = np.load("ivars_for_HIRES.npy")
 
 #tr_ID
 tr_ID = np.load("stellar_names_for_flux_and_ivar.npy",allow_pickle=True)
