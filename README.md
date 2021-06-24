@@ -15,13 +15,12 @@ or
 
 Step 3: cd into the ScriptsAndData folder and now open main_pipeline.py.  
 
-Step 4: In the main_pipeline script, scroll to the second cell and locate the if statemate
+Find the line at the bottom of the script (just CTRL+F __name__). 
 
 ```
 if __name__ == '__main__':
 ```
-
-(or just CTRL+F __name__). This should be the only cell you have to change if you want to use your own set of stars. 
+The only code you should ever have to change is in this if statement. 
 
 ```{python} 
 start_time = time.time()
@@ -41,6 +40,6 @@ To run the pipeline all you need to do is call the method Run on the CIR object.
 Example: If I wanted to use Alpha normalization but not data from my past run of the pipeline I would do .Run(False,True). If I wanted to use a past run but not alpha normalization .Run(True,False). Etc...
 
 
-Step 5: Now you can run all the cells. 
+Step 5: Now you can run the file. 
 
 Step 6: Once the pipeline is completed open main_The_Cannon.py. You should be able to excute the whole script without problems. As soon as the program has completed you can open up TheCannonReports.csv to check the results of the last run. You can also go into the Element_Pictures folder to look at a visual representation of how The Cannon did with the testing set. 
