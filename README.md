@@ -13,7 +13,7 @@ or
 
 ```pip3 install -r requirements.txt```
 
-If you are on Windows, you need to download [geos_c.dll](https://www.dll-files.com/geos_c.dll.html) then put it in your python envoriment's lib folder. You can read more about this [here](https://github.com/Toblerity/Shapely/pull/1108).
+If you are on Windows, you need to download [geos_c.dll](https://www.dll-files.com/geos_c.dll.html) then put it in your python envoriment's Library\bin folder. You can read more about this [here](https://github.com/Toblerity/Shapely/pull/1108).
 
 Step 3: cd into the ScriptsAndData folder and now open main_pipeline.py.  
 
