@@ -3,15 +3,15 @@ Step 0: If you do not have an Keck Observatory Archive (KOA) account please clic
 
 Step 1: Clone this repo 
 
-Step 2: cd into the cloned repo. Any verison of Python 3.8 should work, but all testing was done using 3.8.5.  In the terminal type
+Step 2: cd into the cloned repo. Now we are going to setup the environment used during testing using [anaconda](https://www.anaconda.com)(if you are on Windows you need to be in the anaconda prompt for the next two commands).
 
 
-```pip install -r requirements.txt``` 
+```conda env create --file cannon-env.yml```
 
+then 
 
-or 
+```conda activate cannon``` 
 
-```pip3 install -r requirements.txt```
 
 If you are on Windows, you need to download [geos_c.dll](https://www.dll-files.com/geos_c.dll.html) then put it in your python envoriment's Library\bin folder. You can read more about this [here](https://github.com/Toblerity/Shapely/pull/1108).
 
