@@ -26,23 +26,20 @@ iodine_q = "../Constants/Masks/by_eye_iodine_mask.npy"
 
 
 # tr_label
-#'[C/H]','[N/H]','[O/H]','[Na/H]','[Mg/H]','[Ai/H]','[Si/H]','[Ca/H]','[Ti/H]','[V/H]',
-labels = ['T_{eff}', 'log g','vsini','[Fe/H]'] #Labels you want to use
-d = pd.read_csv("../spocData/df_all.csv", index_col=2)
-for c in ["Unnamed: 0","Unnamed: 0.1",'CH','NH','OH','NaH','MgH','AlH','SiH',
-          'CaH','TiH','VH','CrH','MnH','NiH','YH','DIR']: #Labels you don't want to use need to be taken out
-    d.pop(c)
+#'TEFF', 'LOGG', 'VSINI', 'CH', 'NH', 'OH',
+#'NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH', 'FeH',    
+#       'NiH', 'YH', 'DIR'
+labels = ['CH', 'NH', 'OH'] #Labels you want to use
+d = pd.read_csv("../spocData/df_all.csv",index_col=0)
+d = d[labels] #Slicing the labels you want 
 
 testing_percentage = 0.10
 #Random seed to check
-random_seed_start = 32
-random_seed_end = 33
+random_seed_start = 3
+random_seed_end = 4
 
 
-#***You shouldn't have to change anything beyond this point
-    
-for i in range(22,40):
-    d.pop("Unnamed: {}".format(i))
+#***You shouldn't have to change anything beyond this point***
 
 tr_label = d.to_numpy()
 
@@ -53,7 +50,7 @@ for i in d.index:
         removeList.append(i)
 for name in removeList:
     d = d.drop(name)  
-    
+
     
 index_d = d.index
 index_d = np.array([i.replace(" ","") for i in index_d])
@@ -80,12 +77,7 @@ tr_label = np.array(restruc)
 
 
 if telluric_q: 
-#     t = []
     telluric = np.genfromtxt(telluric_q)
-#     for i in range(len(tr_flux)):
-#         t.append(tr_flux[i] * telluric)
-#     t = np.array(t)
-#     tr_flux = t 
     tr_flux *= telluric
     tr_ivar *= telluric
 if iodine_q:
@@ -124,7 +116,7 @@ for RS in range(random_seed_start,random_seed_end):
     Cannon_test_labels = ds.test_label_vals
     #Mean-Squared Error 
     good_for_reports = True 
-    for lab in ['T_{eff}', 'log g','vsini','[Fe/H]']:
+    for lab in ['TEFF', 'LOGG', 'VSINI']:
         if lab not in labels:
             good_for_reports = False
     if good_for_reports:
@@ -143,6 +135,7 @@ for RS in range(random_seed_start,random_seed_end):
 
         results_log = results_log.append(results,ignore_index=True)
         results_log.to_csv("TheCannonReports.csv",index=False)
+
     def MakeTrueVsPredictedPlots(true_label_vals,predicted_label_vals,col_num,labels):
         '''
 
@@ -156,8 +149,18 @@ for RS in range(random_seed_start,random_seed_end):
         plt.title(f"RS={RS},Test\%={testing_percentage}")
         plt.xlabel(f'true ${labels[col_num]}$')
         plt.ylabel(f'predicted ${labels[col_num]}$')
-        temp_name_change = labels[col_num][1:-1].replace("/","")
+        temp_name_change = labels[col_num]
         plt.savefig(f"Element_Pictures/{temp_name_change}.png")  
         plt.show()
+
+    def SaveTrueAndPredicted(true_label,predicted_label,col_num,labels):
+        '''
+        '''
+        x = true_label[:,col_num]
+        y = predicted_label[:,col_num]
+        both_true_and_predicted = np.vstack((x,y))
+        np.save(f"Element_Pictures/{labels[col_num]}.npy",both_true_and_predicted)
+
     for i in range(len(labels)):
         MakeTrueVsPredictedPlots(true_test_labels,Cannon_test_labels,i,labels)
+        SaveTrueAndPredicted(true_test_labels,Cannon_test_labels,i,labels)
