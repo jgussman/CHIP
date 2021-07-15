@@ -33,14 +33,23 @@ print(f"This took {time_elap/60} minutes!")
 
 These 3 lines of code all serve the purpose of tracking how long the program took to run. If can delete these 3 lines if you wish. 
 
-For the purposes of making sure everything is working correctly change the path of the variable crossMatchedNames to from "../spocData/starnames_crossmatch_SPOCS_NEXSCI.txt" to "../spocData/testStars.txt". testStars.txt contains ~20 stars so the pipeline shouldn't take long to run. 
+For the purposes of making sure everything is working correctly change the path of the variable crossMatchedNames to from "../spocData/starnames_crossmatch_SPOCS_NEXSCI.txt" to "../spocData/testStars.txt". testStars.txt contains ~20 stars so the pipeline shouldn't take long to run. These files contain two columns, the first column is the star’s identifier in any dataset you want (in this case it is the SPOC). The second column must be the identifier for the star in the NEXSCI database. The pipeline will name all the data that is directly used for The Cannon with the names in the first column of the file. 
 
-The only parameter that is not defaulted for the CIR object is the IDs of the stars you want to run through the pipeline. Make sure the inputed list is a 1D iterable object with Keck/HIRES star IDs. 
+The only parameter that is not defaulted for the CIR object is the IDs of the stars you want to run through the pipeline. The IDs will be pulled from the second column of whichever filepath you previously specified (in this case "../spocData/testStars.txt").  
 
 To run the pipeline all you need to do is call the method Run on the CIR object. The run method has 2 parameters that are extremely important and both are defaulted to False. The first parameter if set to False will use the download spectra and normalized Spectra from your previous run. The second parameter is to use Alpha normalization instead of the default normalization. The alpha normalization is much slower than the default normalization from specutils but it produces more accurate results. 
 
-Example: If I wanted to use Alpha normalization but not data from my past run of the pipeline I would do .Run(False,True). If I wanted to use a past run but not alpha normalization .Run(True,False). Etc...
+Example: If I wanted to use Alpha normalization but not data from my past run of the pipeline I would do 
+```{python} 
+.Run(False,True)
+```
 
+If I wanted to use a past run but not alpha normalization 
+
+```{python} 
+.Run(True,False)
+```
+Etc...
 
 Step 5: Now you can run the file. 
 
