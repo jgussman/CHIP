@@ -1,3 +1,5 @@
+# Instructions 
+
 Step 0: If you do not have an Keck Observatory Archive (KOA) account please click
 [here](https://koa.ipac.caltech.edu/cgi-bin/Helpdesk/nph-genTicketForm?projname=KOA). Submit a ticket asking for an account. 
 
@@ -56,4 +58,29 @@ Etc...
 
 Step 5: Now you can run the file. 
 
-Step 6: Once the pipeline is completed open main_The_Cannon.py. You should be able to excute the whole script without problems. As soon as the program has completed you can open up TheCannonReports.csv to check the results of the last run. You can also go into the Element_Pictures folder to look at a visual representation of how The Cannon did with the testing set. 
+Step 6: Once the pipeline is completed open main_The_Cannon.py. 
+
+Step 7: You can change all the parameter's values in the following area:  
+```{python} 
+###
+###Anything BELOW this point (to the stop point) can be editted to work with your needs
+###
+
+...
+
+###
+###Anything ABOVE this point (to the start point) can be editted to work with your needs
+###
+```
+
+Step 8: Now you can run main_The_Cannon.py! Depending your parameters this process can take anywhere from a long time (1 hour) to a long long time (several days). 
+
+Step 9: main_The_Cannon will produce a file called Results.csv. Results.csv contains useful information about all the models it trained and at the bottom of the file is the best model. 
+
+Step 10: If you so wish you can plot the results of the best model using Plot_Results.py. 
+
+
+# Contact Info
+--- 
+
+Email: jgussman@iu.edu 
