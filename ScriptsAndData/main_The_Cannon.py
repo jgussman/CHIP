@@ -1,166 +1,331 @@
+import glob
+import matplotlib.pyplot as plt 
 import numpy as np 
 import pandas as pd 
-import matplotlib.pyplot as plt 
+from math import ceil
+from scipy import stats
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from scipy import stats 
 from TheCannon import model
 from TheCannon import dataset
 import TheCannon
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-from scipy import stats
-### wl
-wl = np.genfromtxt("interpolated_wl.csv",skip_header=1)[::-1]
 
-ID_and_flux = np.load("fluxes_for_HIRES.npy")
-ivar = np.load("ivars_for_HIRES.npy")
+###
+###Anything BELOW this point (to the stop point) can be editted to work with your needs
+###
 
-#tr_ID
-tr_ID = np.load("stellar_names_for_flux_and_ivar.npy",allow_pickle=True)
-# #tr_flux
-tr_flux = ID_and_flux.transpose()
-#tr_ivar
-tr_ivar = ivar.T
-#Telluric (If you want to use the telluric mask add the path otherwise, set to False)
-telluric_q = False #'../Constants/Masks/telluric_mask.txt'
-#Iodine Mask (If you want to use the telluric mask add the path otherwise, set to False)
-iodine_q = "../Constants/Masks/by_eye_iodine_mask.npy" 
-
-
-# tr_label
-#'TEFF', 'LOGG', 'VSINI', 'CH', 'NH', 'OH',
-#'NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH', 'FeH',    
-#       'NiH', 'YH', 'DIR'
-labels = ['CH', 'NH', 'OH'] #Labels you want to use
-d = pd.read_csv("../spocData/df_all.csv",index_col=0)
-d = d[labels] #Slicing the labels you want 
-
+# Wavelengths for all Stars (Needs to be only 1) 
+wavelength_file_path = "interpolated_wl.csv"
+# Flux for each individual Star
+fluxes_file_path = "fluxes_for_HIRES.npy"
+# Ivar for each individual Star
+ivar_file_path = "ivars_for_HIRES.npy"
+# The Star's identification
+id_file_path = "stellar_names_for_flux_and_ivar.npy"
+# Masks to apply for all Stars , [("Name of Mask","file Path to mask"),...,("No Mask",False)]
+masks_list = [("iodine","../Constants/Masks/by_eye_iodine_mask.npy"),("No Mask",False)] 
+#Abudances for all the Parameters 
+abundances_file_path = "../spocData/df_all.csv"
+# Parameter names that reflect the spelling in the file for abundances_file_path
+parameters = ['TEFF', 'LOGG','VSINI', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH', 'FeH','NiH', 'YH'] # 
+# Random Seed for replication
+random_seed = 3
+# Number of Parameters to Train at the same time list 
+group_sizes_list = [1]
+# The % of the data that will be used for testing set
 testing_percentage = 0.10
-#Random seed to check
-random_seed_start = 3
-random_seed_end = 4
+# The % of the data that will be used for validation set
+validation_percentage = 0.10
+# Name and function for computing loss for model
+loss_metric_name = "(mu-mu*)/mu"
+loss_metric_fun = lambda true_array,predicted_array:  (np.mean(true_array) - np.mean(predicted_array)) / np.mean(true_array)
+# Scale the abudances list, [("Name of Scaler",instance of the scaler class),...,("No Scaler",False)], the instances must have a fit_transform
+abundance_scaler_list = [("std_scaler",StandardScaler()),("MinMaxScaler",MinMaxScaler()),("No Scaler",False)]
+
+###
+###Anything ABOVE this point (to the start point) can be editted to work with your needs
+###
+
+# Loading in the data 
+wl = np.genfromtxt(wavelength_file_path,skip_header=1)[::-1]
+fluxes = np.load(fluxes_file_path).T
+ivars = np.load(ivar_file_path).T
+ids = np.load(id_file_path,allow_pickle=True)
+abundances_df = pd.read_csv(abundances_file_path,index_col=0)[parameters] 
+abundances_file_labels = abundances_df.to_numpy()
 
 
-#***You shouldn't have to change anything beyond this point***
+# Removes Spaces from the IDs in the df
+remove_spaces_f = lambda s: s.replace(" ","")
+abundances_df.rename(index = remove_spaces_f,inplace=True)
 
-tr_label = d.to_numpy()
+# Sort df to match ids' order (this also removes stars that we don't have flux&ivars for)
+#this is "slow" but it is fine
+new_abundances_df = abundances_df.iloc[0:0] #Makes a dataframe with no data but same columns
+abundances_array = np.zeros((1,len(parameters)))
+new_fluxes,new_ivars,new_ids,id_list = [],[],[],[]
+for i in range(len(ids)): 
+    id = ids[i]
+    # Is the star in the dataframe
+    bool_array = abundances_df.index == id
+    star_abundances = abundances_df[bool_array]
+    new_abundances_df = new_abundances_df.append(star_abundances)
+    #If an ID is not found then the flux and ivar don't move on 
+    if np.any(bool_array):
+        new_fluxes.append(fluxes[i])
+        new_ivars.append(ivars[i])
+        new_ids.append(id)
+fluxes = np.array(new_fluxes)
+ivars  = np.array(new_ivars)
+ids    = np.array(new_ids)
+abundances_df = new_abundances_df.to_numpy()
 
-removeList = []
-for i in d.index:
-    test = i.replace(" ","")
-    if test not in tr_ID:
-        removeList.append(i)
-for name in removeList:
-    d = d.drop(name)  
 
+# Creation of Test, Training and Validation set
+flux_train, flux_test, abun_train, abun_test = train_test_split(fluxes, abundances_df,
+                test_size=testing_percentage,
+                random_state=random_seed) 
+ivar_train, ivar_test, id_train, id_test = train_test_split(ivars, ids,
+                test_size=testing_percentage,
+                random_state=random_seed) 
+flux_train, flux_valid, abun_train, abun_valid = train_test_split(flux_train, abun_train,
+                test_size=validation_percentage,
+                random_state=random_seed) 
+ivar_train, ivar_valid, id_train, id_valid = train_test_split(ivar_train, id_train,
+                test_size=validation_percentage,
+                random_state=random_seed) 
+
+
+def TrainingBuddys(labels_list,size):
+    '''
+    Assigns which labels will be trained with which other labels, 
+    based on the order they are in labels_list and size 
+    Ex: 
+    labels_list = ['CH', 'NH', 'OH','NaH', 'MgH', 'AlH', 'SiH']
+    size = 3
+    Then the output will be [['CH', 'NH', 'OH'],['NaH', 'MgH', 'AlH'],['SiH']]
     
-index_d = d.index
-index_d = np.array([i.replace(" ","") for i in index_d])
-length_d = len(index_d)
-restruc = []
-array_d = d.to_numpy()
-checking_index = 0
-for i in range(len(tr_ID)):
-    temp_ID = tr_ID[i-checking_index]
-    loc = np.where(index_d == temp_ID)
-    
-    temp_list = []
-    for l in array_d[loc]:
-        for j in l:
-            temp_list.append(float(j))
-    if len(temp_list) == 0:
-        tr_ID = np.delete(tr_ID,i-checking_index)
-        tr_flux = np.delete(tr_flux,i-checking_index,0)
-        tr_ivar = np.delete(tr_ivar,i-checking_index,0)
-        checking_index+=1 
-    else:
-        restruc.append(temp_list)
-tr_label = np.array(restruc)
+    Input: labels_list (list)-> column names of abudances df 
+           size (int)-> maximum # of memebers in each training group
+
+    Output: list of lists 
+
+    *****DO NOT CHANGE THIS UNLESS YOU WILL CHANGE THE ABUDANCE SLICING 
+        CODE RIGHT BEFORE THE MODEL IS TRAINED*****
+    '''
+    groups_list = []
+    for i in range(ceil(len(labels_list)/size)):
+        groups_list.append(labels_list[i*size:i*size + size])
+    return groups_list
+        
+def SaveTrueAndPredicted(true_label,predicted_label,label_name):
+    '''
+    Save data to npy files 
+    '''
+    both_true_and_predicted = np.vstack((true_label,predicted_label))
+    np.save(f"Element_Data/{label_name}.npy",both_true_and_predicted)
 
 
-if telluric_q: 
-    telluric = np.genfromtxt(telluric_q)
-    tr_flux *= telluric
-    tr_ivar *= telluric
-if iodine_q:
-    iodine_mask = np.load(iodine_q)
-    tr_flux *= iodine_mask
-    tr_ivar *= iodine_mask
-    
 
-t1, t2, t3, t4 = tr_ID, tr_flux,tr_ivar,tr_label
+num_training_parameters = len(parameters) 
+results_df = pd.DataFrame(columns=["# Stars","test %","Valid %","Seed #","Mask","Scale Abun","Loss-Metric"] + [label for label in parameters] + ['Training Groups'])
+
+
+
+for mask_info in masks_list:
+    mask_name, mask_file_path = mask_info
+    if mask_file_path:
+        mask = np.load(mask_file_path)
+        u_flux_train = flux_train * mask
+        u_flux_valid = flux_valid * mask 
+        u_ivar_train = ivar_train * mask
+        u_ivar_valid = ivar_valid * mask 
+    else: 
+        u_flux_train = flux_train 
+        u_flux_valid = flux_valid 
+        u_ivar_train = ivar_train 
+        u_ivar_valid = ivar_valid 
+
+    for scaler_info in abundance_scaler_list:
+        scaler_name,scaler_instance = scaler_info 
+	# Must apply scale later since the shape needs to have the same columns 
+        
+
+        for size in group_sizes_list:
+            training_groups = TrainingBuddys(parameters,size)
+
+            #Format for Results
+            group_results = {"# Stars":len(ids), 
+                            "test %" :testing_percentage *100, 
+                            "Valid %": validation_percentage *100, 
+                            "Seed #":random_seed,
+                            "Mask": mask_name,
+                            "Scale Abun":scaler_name,
+                            "Loss-Metric":loss_metric_name}
+            # Add your labels to the results
+            for label in parameters:
+                group_results[label] = float('-inf')
+            group_results['Training Groups'] = training_groups
+
+            for i in range(len(training_groups)):
+                group_parameters = training_groups[i]
+                j = size*i
+                k = j + size
+                # Apply Scaling Abudances
+                if scaler_instance:
+                    u_abun_train = scaler_instance.fit_transform(abun_train[:,j:k])
+                else:
+                    u_abun_train = abun_train
+                    u_abun_valid = abun_valid
+                # Training the model
+                ds = dataset.Dataset(wl, id_train, u_flux_train, u_ivar_train, u_abun_train, id_valid, u_flux_valid, u_ivar_valid)
+                ds.set_label_names(group_parameters) 
+                ds.ranges= [[min(wl),max(wl)]]
+                # #Doesn't change if we change 1 to anything else
+                md = model.CannonModel(1, useErrors=False)
+                md.fit(ds)
+
+                # Infer Labels & Usefull Plots
+                label_errs = md.infer_labels(ds)
+                infered_valid_labels = ds.test_label_vals
+
+                #Calculate MSE and store
+                for y in range(size):
+                    if j+y < num_training_parameters:
+                        if scaler_instance:
+                            u_infered_valid_labels = scaler_instance.inverse_transform(infered_valid_labels)
+                        else:
+                            u_infered_valid_labels = infered_valid_labels
  
-for RS in range(random_seed_start,random_seed_end):
-    #RS = randseed #Random Seed # 
-    tr_ID, tr_flux,tr_ivar,tr_label = t1, t2, t3, t4
-    
-    np.random.seed(RS)
-    train_ID, test_ID, tr_flux, test_flux = train_test_split(tr_ID, tr_flux, test_size = testing_percentage)
-    np.random.seed(RS)
-    tr_ID2, _, tr_ivar, test_ivar = train_test_split(tr_ID, tr_ivar, test_size = testing_percentage)
-    np.random.seed(RS)
-    tr_ID, _, tr_label, true_test_labels = train_test_split(tr_ID, tr_label, test_size = testing_percentage)
 
-    ds = dataset.Dataset(wl, tr_ID, tr_flux, tr_ivar, tr_label, test_ID, test_flux, test_ivar)
-
-    
-    ds.set_label_names(labels)
-
-    ds.ranges= [[min(wl),max(wl)]]
-
-    md = model.CannonModel(1, useErrors=False)
-    md.fit(ds)
+                        group_results[parameters[j+y]] = loss_metric_fun(abun_valid[:,j+y],u_infered_valid_labels[:,y])
+            results_df = results_df.append([group_results])
 
 
-    md.diagnostics_leading_coeffs(ds)
-    md.diagnostics_plot_chisq(ds)
-    label_errs = md.infer_labels(ds)
-    Cannon_test_labels = ds.test_label_vals
-    #Mean-Squared Error 
-    good_for_reports = True 
-    for lab in ['TEFF', 'LOGG', 'VSINI']:
-        if lab not in labels:
-            good_for_reports = False
-    if good_for_reports:
-        results_log = pd.read_csv("TheCannonReports.csv")
-        results = {"# of Stars":len(tr_ID) + len(test_ID), 
-                   "test %" :testing_percentage *100, 
-                   "Seed #":RS,
-                   "Telluric": telluric_q,
-                   "MSE T_{eff}":float('-inf'),
-                   "MSE log g":float('-inf'),
-                  "MSE vsini":float('-inf'),
-                  "MSE [Fe/H]":float('-inf'),
-                  "Notes": "NA"}
-        for i in range(len(labels)):
-            results["MSE " + labels[i]] = mean_squared_error(true_test_labels[:,i],Cannon_test_labels[:,i])
+#Reapply Train Test Split 
+#so the validation set is inside the training set
+flux_train, flux_test, abun_train, abun_test = train_test_split(fluxes, abundances_df,
+                test_size=testing_percentage,
+                random_state=random_seed) 
+ivar_train, ivar_test, id_train, id_test = train_test_split(ivars, ids,
+                test_size=testing_percentage,
+                random_state=random_seed) 
 
-        results_log = results_log.append(results,ignore_index=True)
-        results_log.to_csv("TheCannonReports.csv",index=False)
 
-    def MakeTrueVsPredictedPlots(true_label_vals,predicted_label_vals,col_num,labels):
+
+best_model = results_df.iloc[0]
+for row in range(1,results_df.shape[0]-1):
+    current_best_model_score = 0
+    temp_model_score         = 0 
+    temp_model = results_df.iloc[row]
+
+    #Compare the current best model and the next model
+    #which ever model does performs better on more parameters 
+    #will be the best model 
+    for param in parameters: 
+        best_m_param = np.abs(best_model[param]) 
+        temp_m_param = np.abs(temp_model[param])
+        if best_m_param < temp_m_param:
+            current_best_model_score += 1 
+        elif best_m_param > temp_m_param:
+            temp_model_score += 1 
+        #On the off chance they are equal neither gets a point
+    if current_best_model_score < temp_model_score:
+        best_model = temp_model
+
+print(f'''
+The best model has the follow results 
+{best_model}
+''')
+
+
+#Format for Results
+group_results = {"# Stars":len(ids), 
+                "test %" :best_model["test %"] *100, 
+                "Valid %": best_model["Valid %"] *100, 
+                "Seed #":best_model["Seed #"],
+                "Mask": best_model["Mask"],
+                "Scale Abun":best_model["Scale Abun"],
+                "Loss-Metric":best_model["Loss-Metric"]}
+# Add your labels to the results
+for label in parameters:
+    group_results[label] = float('-inf')
+group_results['Training Groups'] = training_groups
+
+## Apply Best Mask
+best_mask_name = best_model["Mask"]
+mask_file_path = [mask[1] for mask in masks_list if mask[0] == best_mask_name][0]
+if mask_file_path:
+    mask = np.load(mask_file_path)
+    u_flux_train = flux_train * mask
+    u_flux_test  = flux_test * mask 
+    u_ivar_train = ivar_test * mask
+else: 
+    u_flux_train = flux_train 
+    u_flux_test  = flux_test 
+    u_ivar_train = ivar_train 
+    u_ivar_test  = ivar_test
+
+## Apply Best Scaler
+best_scaler_name = best_model["Scale Abun"]
+scaler_instance = [scaler[1] for scaler in abundance_scaler_list if scaler[0] == best_scaler_name][0]
+
+
+## Best Training Groups 
+training_groups = best_model["Training Groups"]
+size = len(training_groups[0])
+
+def SaveTrueAndPredicted(true_label,predicted_label,col_num,labels):
         '''
-
-        '''
-        x = true_label_vals[:,col_num]
-        y = predicted_label_vals[:,col_num]
-        res = stats.linregress(x, y)
-        plt.plot(x, y, 'o', label='true')
-        plt.plot(x, res.intercept + res.slope*x, 'r', label='Best Fit')
-        plt.legend()
-        plt.title(f"RS={RS},Test\%={testing_percentage}")
-        plt.xlabel(f'true ${labels[col_num]}$')
-        plt.ylabel(f'predicted ${labels[col_num]}$')
-        temp_name_change = labels[col_num]
-        plt.savefig(f"Element_Pictures/{temp_name_change}.png")  
-        plt.show()
-
-    def SaveTrueAndPredicted(true_label,predicted_label,col_num,labels):
-        '''
+        For saving the test and infered parameter values to a npy file 
         '''
         x = true_label[:,col_num]
         y = predicted_label[:,col_num]
         both_true_and_predicted = np.vstack((x,y))
-        np.save(f"Element_Pictures/{labels[col_num]}.npy",both_true_and_predicted)
+        np.save(f"Best_Model_Results/{labels[col_num]}.npy",both_true_and_predicted)
 
-    for i in range(len(labels)):
-        MakeTrueVsPredictedPlots(true_test_labels,Cannon_test_labels,i,labels)
-        SaveTrueAndPredicted(true_test_labels,Cannon_test_labels,i,labels)
+# Training and Testing
+for i in range(len(training_groups)):
+    group_parameters = training_groups[i]
+    j = size*i
+    k = j + size
+    if scaler_instance:
+        u_abun_train = scaler_instance.fit_transform(abun_train[:,j:k])
+    else:
+        u_abun_train = abun_train
+        u_abun_test = abun_test
+
+    # Training the model
+    ds = dataset.Dataset(wl, id_train, u_flux_train, u_ivar_train, u_abun_train, id_test, u_flux_test, u_ivar_test)
+    ds.set_label_names(group_parameters) 
+    ds.ranges= [[min(wl),max(wl)]]
+    # #Doesn't change results if we change 1 to anything else
+    md = model.CannonModel(1, useErrors=False)
+    md.fit(ds)
+
+    # Infer Labels & Usefull Plots
+    label_errs = md.infer_labels(ds)
+    md.diagnostics_leading_coeffs(ds)
+    md.diagnostics_plot_chisq(ds)
+    infered_test_labels = ds.test_label_vals
+
+    #Calculate MSE and store
+    for y in range(size):
+        if j+y < num_training_parameters:
+            if scaler_instance:
+                u_infered_test_labels = scaler_instance.inverse_transform(infered_test_labels)
+            else:
+                u_infered_test_labels = infered_test_labels
+                u_abun_test = abun_test
+            group_results[parameters[j+y]] = loss_metric_fun(u_abun_test[:,j+y],u_infered_test_labels[:,y])
+            for i in range(len(parameters[j+y])):
+                #MakeTrueVsPredictedPlots(true_test_labels,Cannon_test_labels,i,labels)
+                SaveTrueAndPredicted(u_abun_test[:,j+y],u_infered_test_labels[:,y],i,parameters)
+
+    results_df = results_df.append([group_results])
+results_df.to_csv("Results")
+print("The very last model added to Results.csv is the best model")
+print("Run Plot_Results.py to graph the results")
+

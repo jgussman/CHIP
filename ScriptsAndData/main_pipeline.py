@@ -13,11 +13,11 @@ from scipy import interpolate
 import numpy as np
 import pandas as pd 
 import time 
-
+np.random.seed(3)
 class CIR:
 
-    def __init__(self,star_ID_array,wl_solution_path = './wl_solution.csv',
-                 rvOutputPath='./RVOutput',spectraOutputPath = './SpectraOutput' ):
+    def __init__(self,star_ID_array,wl_solution_path = '../spocData/wl_solution.csv',
+                 rvOutputPath='./RVOutput',spectraOutputPath = './SpectraOutput'):
         '''
         Used for reducing deblazed Keck HIRES spectra for the purpose of putting the output 
         inot The Cannon. 
@@ -87,6 +87,7 @@ class CIR:
         #Downloading the RV data as well as getting the largest RV value for each star
         hiresName_fileName_rv_dic = {"HIRESName": [],"FILENAME":[], "RV":[]}  
         rvDownloadLocation = self.dataRV.localdir
+        i = 0
         for name in self.star_ID_array:
             #Make sure the data is in workspace
             hiresName_fileName_rv_dic["HIRESName"].append(name)
@@ -123,6 +124,7 @@ class CIR:
         print("Downloading Spectra Has Began")
         self.spectraDic = {} 
         download_Location = self.dataSpectra.localdir #This is the second parameter of hiresprv.download.Download
+        i = 0
         for filename in self.filename_rv_df["FILENAME"]:
             #I tried to use the , seperation and new line seperation 
             #for the different file names but it doesn't seem to work.
@@ -131,6 +133,10 @@ class CIR:
             file_path = "{0}/{1}.fits".format(download_Location,filename)
             temp_deblazedFlux = fits.getdata(file_path)
             temp_deblazedFlux = temp_deblazedFlux.flatten()
+            if i == 0:
+                print(filename)
+                print(temp_deblazedFlux)
+                i +=1 
             #spectraDic is the deblazed spectra 
             if not np.isnan(temp_deblazedFlux).any(): #Happens in the ivar
                 self.spectraDic[filename] = temp_deblazedFlux
@@ -410,7 +416,7 @@ class CIR:
              
 if __name__ == '__main__':
     start_time = time.time()
-    crossMatchedNames = pd.read_csv("../spocData/starnames_crossmatch_SPOCS_NEXSCI.txt",sep=" ")
+    crossMatchedNames = pd.read_csv("../spocData/testStars.txt",sep=" ")
     hiresNames = crossMatchedNames["HIRES"].to_numpy()
     cirObject = CIR(hiresNames)
     cirObject.Run(False,False)
