@@ -6,11 +6,14 @@ Step 1: Clone this repo
 Step 2: cd into the cloned repo. Now we are going to setup the environment used during testing using [anaconda](https://www.anaconda.com)(if you are on Windows you need to be in the anaconda prompt for the next two commands).
 
 
-```conda env create --file cannon-env.yml```
+```conda create --name chip python=3.8.5```
 
-then 
+```conda activate chip``` 
 
-```conda activate cannon``` 
+```cd CHIP```
+
+```pip3 install -r requirements.txt```
+
 
 
 If you are on Windows, you need to download [geos_c.dll](https://www.dll-files.com/geos_c.dll.html) then put it in your python envoriment's Library\bin folder. You can read more about this [here](https://github.com/Toblerity/Shapely/pull/1108).
