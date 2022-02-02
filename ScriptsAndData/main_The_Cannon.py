@@ -25,15 +25,15 @@ ivar_file_path = "ivars_for_HIRES.npy"
 # The Star's identification
 id_file_path = "stellar_names_for_flux_and_ivar.npy"
 # Masks to apply for all Stars , [("Name of Mask","file Path to mask"),...,("No Mask",False)]
-masks_list = [("iodine","../Constants/Masks/by_eye_iodine_mask.npy"),("No Mask",False)] 
+masks_list = [("No Mask",False)]  # ("iodine","../Constants/Masks/by_eye_iodine_mask.npy"),
 #Abudances for all the Parameters 
 abundances_file_path = "../spocData/df_all.csv"
 # Parameter names that reflect the spelling in the file for abundances_file_path
-parameters = ['TEFF', 'LOGG','VSINI', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH', 'FeH','NiH', 'YH'] # 
+parameters = ['TEFF'] # , 'LOGG','VSINI', 'FeH', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH','NiH', 'YH'
 # Random Seed for replication
 random_seed = 3
 # Number of Parameters to Train at the same time list 
-group_sizes_list = [1]
+group_sizes_list = [1] #,2,3,4,5,6,7,8
 # The % of the data that will be used for testing set
 testing_percentage = 0.10
 # The % of the data that will be used for validation set
@@ -42,7 +42,7 @@ validation_percentage = 0.10
 loss_metric_name = "(mu-mu*)/mu"
 loss_metric_fun = lambda true_array,predicted_array:  (np.mean(true_array) - np.mean(predicted_array)) / np.mean(true_array)
 # Scale the abudances list, [("Name of Scaler",instance of the scaler class),...,("No Scaler",False)], the instances must have a fit_transform
-abundance_scaler_list = [("std_scaler",StandardScaler()),("MinMaxScaler",MinMaxScaler()),("No Scaler",False)]
+abundance_scaler_list = [("std_scaler",StandardScaler())] # ,("No Scaler",False) ,("MinMaxScaler",MinMaxScaler())
 
 ###
 ###Anything ABOVE this point (to the start point) can be editted to work with your needs
@@ -120,12 +120,7 @@ def TrainingBuddys(labels_list,size):
         groups_list.append(labels_list[i*size:i*size + size])
     return groups_list
         
-def SaveTrueAndPredicted(true_label,predicted_label,label_name):
-    '''
-    Save data to npy files 
-    '''
-    both_true_and_predicted = np.vstack((true_label,predicted_label))
-    np.save(f"Element_Data/{label_name}.npy",both_true_and_predicted)
+
 
 
 
@@ -240,7 +235,6 @@ The best model has the follow results
 {best_model}
 ''')
 
-
 #Format for Results
 group_results = {"# Stars":len(ids), 
                 "test %" :best_model["test %"] *100, 
@@ -261,7 +255,8 @@ if mask_file_path:
     mask = np.load(mask_file_path)
     u_flux_train = flux_train * mask
     u_flux_test  = flux_test * mask 
-    u_ivar_train = ivar_test * mask
+    u_ivar_train = ivar_train * mask
+    u_ivar_test  = ivar_test * mask
 else: 
     u_flux_train = flux_train 
     u_flux_test  = flux_test 
@@ -277,14 +272,12 @@ scaler_instance = [scaler[1] for scaler in abundance_scaler_list if scaler[0] ==
 training_groups = best_model["Training Groups"]
 size = len(training_groups[0])
 
-def SaveTrueAndPredicted(true_label,predicted_label,col_num,labels):
-        '''
-        For saving the test and infered parameter values to a npy file 
-        '''
-        x = true_label[:,col_num]
-        y = predicted_label[:,col_num]
-        both_true_and_predicted = np.vstack((x,y))
-        np.save(f"Best_Model_Results/{labels[col_num]}.npy",both_true_and_predicted)
+def SaveTrueAndPredicted(true_label,predicted_label,label_name):
+    '''
+    Save data to npy files 
+    '''
+    both_true_and_predicted = np.vstack((true_label,predicted_label))
+    np.save(f"Element_Data/{label_name}.npy",both_true_and_predicted)
 
 # Training and Testing
 for i in range(len(training_groups)):
@@ -314,18 +307,16 @@ for i in range(len(training_groups)):
     #Calculate MSE and store
     for y in range(size):
         if j+y < num_training_parameters:
+            u_abun_test = abun_test
             if scaler_instance:
                 u_infered_test_labels = scaler_instance.inverse_transform(infered_test_labels)
             else:
                 u_infered_test_labels = infered_test_labels
-                u_abun_test = abun_test
-            group_results[parameters[j+y]] = loss_metric_fun(u_abun_test[:,j+y],u_infered_test_labels[:,y])
-            for i in range(len(parameters[j+y])):
-                #MakeTrueVsPredictedPlots(true_test_labels,Cannon_test_labels,i,labels)
-                SaveTrueAndPredicted(u_abun_test[:,j+y],u_infered_test_labels[:,y],i,parameters)
 
+            group_results[parameters[j+y]] = loss_metric_fun(u_abun_test[:,j+y],u_infered_test_labels[:,y])
+            SaveTrueAndPredicted(u_abun_test[:,j+y],u_infered_test_labels[:,y],parameters[j+y])
     results_df = results_df.append([group_results])
 results_df.to_csv("Results")
-print("The very last model added to Results.csv is the best model")
+print("The very last model added to Results.csv is the model trained with the best hyperparameters")
 print("Run Plot_Results.py to graph the results")
 

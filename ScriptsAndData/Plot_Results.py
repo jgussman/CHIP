@@ -16,8 +16,6 @@ folder_location = "Element_Data" #The folder where results of the best model end
 ###Anything ABOVE this point (to the start point) can be editted to work with your needs
 ###
 
-
-
 mean_values = {"Parameter":[],"mu Predicted":[],"mu SPOC":[],"Relative Difference":[]}
 
 
@@ -42,7 +40,6 @@ for path in glob.glob(folder_location+"/*.npy"):
         elif element == "VSINI":
             element = r"$v\sin i$ $[km/s]$"
     fig = plt.figure(figsize=(9, 9))
-
 
     ax1 = fig.add_subplot()
     
@@ -85,10 +82,6 @@ for path in glob.glob(folder_location+"/*.npy"):
     mean_values["mu Predicted"].append(p_mu)
     mean_values["mu SPOC"].append(t_mu)
     mean_values["Relative Difference"].append(Relative_difference(t_mu,p_mu))
-    
-
-    
-    
     
 
 mean_values = pd.DataFrame.from_dict(mean_values)
