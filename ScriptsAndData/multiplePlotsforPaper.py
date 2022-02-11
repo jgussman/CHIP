@@ -1,43 +1,6 @@
-# # --------------------------------------------
-
-# import numpy as np
-# import matplotlib.pyplot as plt
-
-# #Raw Deblazed Spectra 
-# raw = np.load("raw_deblazed_spectra.npy")
-# wl_solution = np.genfromtxt("wl_solution.csv",skip_header=2)   # UNITS: Angstrom
-# continum =  np.load("Normalized_Spectra/r20070426.143_cfit.npy")
-# continum_adjustments = [1600,1850,2150,2250,2450,2550,2650,2750,2780,2730,3000,3000,2900,2950,3000,2900]
-# for i in range(16):
-#     continum[i] *= continum_adjustments[i]
-# continum = continum.flatten()
-# plt.plot(wl_solution,raw)
-# plt.plot(wl_solution,continum,label="Continum")
-# plt.xlabel(r"$\AA$")
-# plt.ylabel("counts")
-# plt.title("Deblazed HD118744")
-# plt.legend()
-# # plt.show()
-# plt.savefig("Element_Pictures/conitnum_fit.png",dpi=400)
-# plt.show()
-
-
-# #Normalization 
-# raw = np.load("Normalized_Spectra/r20070426.143_specnorm_nopeaks.npy").flatten()
-# wl_solution = np.genfromtxt("wl_solution.csv",skip_header=2)   # UNITS: Angstrom
-# plt.plot(wl_solution,raw)
-# plt.xlabel(r"$\AA$")
-# plt.xlim((min(wl_solution),max(wl_solution)))
-# plt.ylabel("normalized flux")
-# plt.title(r"$\alpha$-normalized of HD118744", fontsize="larger")
-# # plt.show()
-# plt.savefig("Element_Pictures/normalized_hd118744.png",dpi=400)
-# plt.show()
 
 
 # --------------------------------------------
-
-from struct import unpack
 import numpy as np
 import matplotlib.pyplot as plt 
 from scipy import stats
@@ -46,9 +9,10 @@ import glob
 fontsize = 12
 i = 0
 j = 0
-fig, axs = plt.subplots(3, 6)
+fig, axs = plt.subplots(3, 6,figsize = (16,8)) # (# of rows, # of cols)
+
 o = 0
-for path in glob.glob("Element_Pictures/*.npy"):
+for path in glob.glob("Element_Data/*.npy"):
     element = path.split("/")[-1].split("\\")[-1].replace(".npy","")
     nameWithoutBrackets = element
 
@@ -85,9 +49,9 @@ for path in glob.glob("Element_Pictures/*.npy"):
         fig.text(0.503, 0.01, 'SPOC Value', ha='center', va='center')
         fig.text(0.01, 0.5, "The Cannon's Predicted Value", ha='center', va='center', rotation='vertical')
         plt.tight_layout()
-        plt.savefig("Element_Pictures/All_in_one.png",dpi=500)
+        plt.savefig("Element_Data/All_in_one.png",dpi=300)
         plt.show()
-        break
+    
 
 
 # --------------------------------------------
@@ -112,7 +76,7 @@ for path in glob.glob("Element_Pictures/*.npy"):
 # i = 0
 # j = 0
 # o = 0
-# for path in glob.glob("Element_Pictures/*.npy"):
+# for path in glob.glob("Element_Data/*.npy"):
 #     element = path.split("/")[-1].split("\\")[-1].replace(".npy","")
 #     nameWithoutBrackets = element
 
@@ -173,7 +137,7 @@ for path in glob.glob("Element_Pictures/*.npy"):
 
 #     # plt.show()
 #     # break 
-#     plt.savefig(f"Element_Pictures/{nameWithoutBrackets}",dpi=300)
+#     plt.savefig(f"Element_Data/{nameWithoutBrackets}",dpi=300)
 #     print(nameWithoutBrackets) 
    
 #     #Save values for table

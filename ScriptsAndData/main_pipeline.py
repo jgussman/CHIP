@@ -418,7 +418,7 @@ if __name__ == '__main__':
     start_time = time.time()
     crossMatchedNames = pd.read_csv("../spocData/testStars.txt",sep=" ")
     hiresNames = crossMatchedNames["HIRES"].to_numpy()
-    cirObject = CIR(hiresNames)
-    cirObject.Run(False,True)
+    chipObject = CIR(hiresNames)
+    chipObject.Run(use_data=False,slow_normalize = True)
     time_elap = time.time() - start_time 
     print(f"This took {time_elap/60} minutes!")

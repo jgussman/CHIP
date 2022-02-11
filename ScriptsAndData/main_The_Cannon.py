@@ -1,9 +1,6 @@
-import glob
-import matplotlib.pyplot as plt 
 import numpy as np 
 import pandas as pd 
 from math import ceil
-from scipy import stats
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
@@ -16,31 +13,50 @@ import TheCannon
 ###Anything BELOW this point (to the stop point) can be editted to work with your needs
 ###
 
-# Wavelengths for all Stars (Needs to be only 1) 
+# N = number of pixels in wavelength file 
+# S = number of stars 
+# A = number of abudances (labels)
+# X = doesn't matter the number 
+
+# Wavelengths for all Stars, Shape = (N,) 
 wavelength_file_path = "interpolated_wl.csv"
-# Flux for each individual Star
+
+# Flux for each individual Star, Shape = (S,N)
 fluxes_file_path = "fluxes_for_HIRES.npy"
-# Ivar for each individual Star
+
+# Ivar for each individual Star, Shape = (S,N)
 ivar_file_path = "ivars_for_HIRES.npy"
-# The Star's identification
+
+# The Star's identification, Shape = (S,)
 id_file_path = "stellar_names_for_flux_and_ivar.npy"
-# Masks to apply for all Stars , [("Name of Mask","file Path to mask"),...,("No Mask",False)]
+
+# Masks to apply for all Stars , example: [("Name of Mask","file Path to mask"),...,("No Mask",False)], shape of mask = (N,)
 masks_list = [("No Mask",False)]  # ("iodine","../Constants/Masks/by_eye_iodine_mask.npy"),
-#Abudances for all the Parameters 
+
+#Abudances for all the Parameters, dataframe shape = (X,A)
+# The 0th column will be converted to the index!!! This means the 0th column needs to be the identifier corresponding 
+# to the 0th column of the file3 you put in for crossMatchedNames in main_pipeline.py
 abundances_file_path = "../spocData/df_all.csv"
+
 # Parameter names that reflect the spelling in the file for abundances_file_path
-parameters = ['TEFF'] # , 'LOGG','VSINI', 'FeH', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH','NiH', 'YH'
+parameters = ['TEFF', 'LOGG','VSINI', 'FeH', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH','NiH', 'YH']  
+
 # Random Seed for replication
 random_seed = 3
-# Number of Parameters to Train at the same time list 
-group_sizes_list = [1] #,2,3,4,5,6,7,8
-# The % of the data that will be used for testing set
-testing_percentage = 0.10
-# The % of the data that will be used for validation set
-validation_percentage = 0.10
+
+# Number of Parameters to Train at the same time list, must be an int and can't be left empty
+group_sizes_list = [8] #1,2,3,4,5,6,7,8
+
+# The % of the stars that will be used for testing set
+testing_percentage = 10#%
+
+# The % of the training stars that will be used for validation set
+validation_percentage = 10#%
+
 # Name and function for computing loss for model
 loss_metric_name = "(mu-mu*)/mu"
 loss_metric_fun = lambda true_array,predicted_array:  (np.mean(true_array) - np.mean(predicted_array)) / np.mean(true_array)
+
 # Scale the abudances list, [("Name of Scaler",instance of the scaler class),...,("No Scaler",False)], the instances must have a fit_transform
 abundance_scaler_list = [("std_scaler",StandardScaler())] # ,("No Scaler",False) ,("MinMaxScaler",MinMaxScaler())
 
@@ -55,6 +71,10 @@ ivars = np.load(ivar_file_path).T
 ids = np.load(id_file_path,allow_pickle=True)
 abundances_df = pd.read_csv(abundances_file_path,index_col=0)[parameters] 
 abundances_file_labels = abundances_df.to_numpy()
+testing_percentage /= 100
+validation_percentage /= 100
+
+print(testing_percentage)
 
 
 # Removes Spaces from the IDs in the df
