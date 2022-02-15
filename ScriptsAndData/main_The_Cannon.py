@@ -100,11 +100,11 @@ for i in range(len(ids)):
 fluxes = np.array(new_fluxes)
 ivars  = np.array(new_ivars)
 ids    = np.array(new_ids)
-abundances_df = new_abundances_df.to_numpy()
+abundances_array = new_abundances_df.to_numpy()
 
 
 # Creation of Test, Training and Validation set
-flux_train, flux_test, abun_train, abun_test = train_test_split(fluxes, abundances_df,
+flux_train, flux_test, abun_train, abun_test = train_test_split(fluxes, abundances_array,
                 test_size=testing_percentage,
                 random_state=random_seed) 
 ivar_train, ivar_test, id_train, id_test = train_test_split(ivars, ids,
@@ -221,7 +221,7 @@ for mask_info in masks_list:
 
 #Reapply Train Test Split 
 #so the validation set is inside the training set
-flux_train, flux_test, abun_train, abun_test = train_test_split(fluxes, abundances_df,
+flux_train, flux_test, abun_train, abun_test = train_test_split(fluxes, abundances_array,
                 test_size=testing_percentage,
                 random_state=random_seed) 
 ivar_train, ivar_test, id_train, id_test = train_test_split(ivars, ids,
