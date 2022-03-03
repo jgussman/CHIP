@@ -10,30 +10,30 @@ from TheCannon import dataset
 import TheCannon
 
 ###
-###Anything BELOW this point (to the stop point) can be editted to work with your needs
+###Anything BELOW this point (to the stop point) can be edited to work with your needs
 ###
 
 # N = number of pixels in wavelength file 
 # S = number of stars 
-# A = number of abudances (labels)
+# A = number of labels (number of stellar parameters fitted with the model)
 # X = doesn't matter the number 
 
-# Wavelengths for all Stars, Shape = (N,) 
+# Wavelengths for all stars: shape = (N,) 
 wavelength_file_path = "interpolated_wl.csv"
 
-# Flux for each individual Star, Shape = (S,N)
+# Flux for each individual star: shape = (S,N)
 fluxes_file_path = "fluxes_for_HIRES.npy"
 
-# Ivar for each individual Star, Shape = (S,N)
+# Inverse variance (1/sigma**2) for each individual star: shape = (S,N)
 ivar_file_path = "ivars_for_HIRES.npy"
 
-# The Star's identification, Shape = (S,)
+# The star's identification/name: shape = (S,)
 id_file_path = "stellar_names_for_flux_and_ivar.npy"
 
-# Masks to apply for all Stars , example: [("Name of Mask","file Path to mask"),...,("No Mask",False)], shape of mask = (N,)
+# Masks to apply to all stars; for example: [("Name of Mask","file Path to mask"),...,("No Mask",False)], shape of mask = (N,)
 masks_list = [("No Mask",False)]  # ("iodine","../Constants/Masks/by_eye_iodine_mask.npy"),
 
-#Abudances for all the Parameters, dataframe shape = (X,A)
+#Abudances for all the parameters: dataframe with shape = (X,A)
 # The 0th column will be converted to the index!!! This means the 0th column needs to be the identifier corresponding 
 # to the 0th column of the file3 you put in for crossMatchedNames in main_pipeline.py
 abundances_file_path = "../spocData/df_all.csv"
@@ -41,27 +41,27 @@ abundances_file_path = "../spocData/df_all.csv"
 # Parameter names that reflect the spelling in the file for abundances_file_path
 parameters = ['TEFF', 'LOGG','VSINI', 'FeH', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH','NiH', 'YH']  
 
-# Random Seed for replication
+# Random seed for replication
 random_seed = 3
 
-# Number of Parameters to Train at the same time list, must be an int and can't be left empty
+# Number of parameters to train at the same time: must be a list of int values and cannot be left empty
 group_sizes_list = [8] #1,2,3,4,5,6,7,8
 
-# The % of the stars that will be used for testing set
+# The % of the stars that will be used as the test set
 testing_percentage = 10#%
 
-# The % of the training stars that will be used for validation set
+# The % of the training stars that will be used as the validation set
 validation_percentage = 10#%
 
 # Name and function for computing loss for model
 loss_metric_name = "(mu-mu*)/mu"
 loss_metric_fun = lambda true_array,predicted_array:  (np.mean(true_array) - np.mean(predicted_array)) / np.mean(true_array)
 
-# Scale the abudances list, [("Name of Scaler",instance of the scaler class),...,("No Scaler",False)], the instances must have a fit_transform
+# Scale the abundances list, [("Name of Scaler",instance of the scaler class),...,("No Scaler",False)], the instances must have a fit_transform
 abundance_scaler_list = [("std_scaler",StandardScaler())] # ,("No Scaler",False) ,("MinMaxScaler",MinMaxScaler())
 
 ###
-###Anything ABOVE this point (to the start point) can be editted to work with your needs
+###Anything ABOVE this point (to the start point) can be edited to work with your needs
 ###
 
 # Loading in the data 
@@ -81,8 +81,8 @@ print(testing_percentage)
 remove_spaces_f = lambda s: s.replace(" ","")
 abundances_df.rename(index = remove_spaces_f,inplace=True)
 
-# Sort df to match ids' order (this also removes stars that we don't have flux&ivars for)
-#this is "slow" but it is fine
+# Sort df to match ids order (this also removes stars that we don't have flux&ivars for)
+# this is "slow" but it is fine
 new_abundances_df = abundances_df.iloc[0:0] #Makes a dataframe with no data but same columns
 abundances_array = np.zeros((1,len(parameters)))
 new_fluxes,new_ivars,new_ids,id_list = [],[],[],[]
@@ -318,7 +318,7 @@ for i in range(len(training_groups)):
     md = model.CannonModel(1, useErrors=False)
     md.fit(ds)
 
-    # Infer Labels & Usefull Plots
+    # Infer labels & useful plots
     label_errs = md.infer_labels(ds)
     md.diagnostics_leading_coeffs(ds)
     md.diagnostics_plot_chisq(ds)
