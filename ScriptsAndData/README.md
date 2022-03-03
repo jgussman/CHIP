@@ -15,14 +15,14 @@ The only code you should ever have to change in this file is within this if-stat
 
 ```{python} 
     crossMatchedNames = pd.read_csv("../spocData/testStars.txt",sep=" ")
-    chipObject.Run(use_data=False,slow_normalize = True)
+    chipObject.Run(use_data=False, slow_normalize=True)
 ```
 
 **crossMatchedNames** will be assigned to be a dataframe with the size (N x 2). The file that is read in must contain two columns:
 1. The first column is the star’s identifier (in our case, we use the star names within the SPOCS dataset). CHIP will name all of its output files to correspond with the identifiers provided in the first column. 
 2. The second column MUST be the identifier for the star in the NEXSCI database with the column header name ```HIRES```. 
 
-**chipObject.Run( ... , ... )** CHIP's Run method has 2 parameters that are extremely important, and both are defaulted to False:
+**chipObject.Run(use_data=False, slow_normalize=True)** CHIP's Run method has 2 parameters that are extremely important, and both are defaulted to False:
 1. use_data: If set to True, CHIP will use the download spectra and normalized spectra from your previous run. 
 2. slow_normalize: If set to True, CHIP will use an alpha shapes continuum normalization instead of the default normalization from specutils. The alpha normalization is much slower than the specutils normalization; however, it produces more accurate results. 
 
