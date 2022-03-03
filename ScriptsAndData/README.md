@@ -1,54 +1,53 @@
-# Tutorial 
+# Tutorial: Getting Started with CHIP
 ---
-(Assumes that you have the chip environment already activated if not ```conda activate chip```)
 
+Note: This tutorial assumes that you already have the CHIP environment activated. If not, run the command ```conda activate chip```.
+
+There are two key files that the user will edit to run CHIP: *main_pipeline.py* (Step 1) and *main_The_Cannon.py* (Step 2).
 
 ## Step 1
-Open *main_pipeline.py* in your IDE of choice.  
-
-Use CTRL+F to find the following line of ocde 
+Open *main_pipeline.py*. Find the following line of code: 
 
 ```
 if __name__ == '__main__':
 ```
-The only code you should ever have to change is in this if-statement, particularly the following 2-lines
+The only code you should ever have to change in this file is within this if-statement, In particular, following 2-lines
 
 ```{python} 
     crossMatchedNames = pd.read_csv("../spocData/testStars.txt",sep=" ")
     chipObject.Run(use_data=False,slow_normalize = True)
 ```
 
-**crossMatchedNames** will be assigned to be a N by 2 dataframe. The file read in must contain two columns, the first column is the star’s identifier in any dataset you want (in our case SPOCS). The second column MUST be the identifier for the star in the NEXSCI database with the column header name ```HIRES```. CHIP will name all the data files corresponding to the first column's id. 
+**crossMatchedNames** will be assigned to be a dataframe with the size (N x 2). The file that is read in must contain two columns:
+1. The first column is the star’s identifier (in our case, we use the star names within the SPOCS dataset). CHIP will name all of its output files to correspond with the identifiers provided in the first column. 
+2. The second column MUST be the identifier for the star in the NEXSCI database with the column header name ```HIRES```. 
 
-**chipObject.Run( ... , ... )** CHIP's Run method has 2 parameters that are extremely important (both are defaulted to False). The first parameter (use_data) if set to True will use the download spectra and normalized Spectra from your previous run. The second parameter (slow_normalize) if set to True use Alpha normalization instead of the default normalization. The alpha normalization is much slower than the default normalization from specutils but it produces more accurate results. 
+**chipObject.Run( ... , ... )** CHIP's Run method has 2 parameters that are extremely important, and both are defaulted to False:
+1. use_data: If set to True, CHIP will use the download spectra and normalized spectra from your previous run. 
+2. slow_normalize: If set to True, CHIP will use an alpha shapes continuum normalization instead of the default normalization from specutils. The alpha normalization is much slower than the specutils normalization; however, it produces more accurate results. 
+
 
 ## Step 2
-You're now all set to run *main_pipeline.py*. 
+Once the settings in *main_pipeline.py* have been confirmed, open *main_The_Cannon.py*. 
 
-## Step 3
-Once *main_pipeline.py* is completed open *main_The_Cannon.py*. 
-
-You should only need to can change the valariables in the following dotted area to fit your specificities:  
+You should only need to change the variables in the following dotted area to suit your specifications:  
 ```{python} 
 ###
-###Anything BELOW this point (to the stop point) can be editted to work with your needs
+###Anything BELOW this point (to the stop point) can be edited to work with your needs
 ###
 
 ...
 
 ###
-###Anything ABOVE this point (to the start point) can be editted to work with your needs
+###Anything ABOVE this point (to the start point) can be edited to work with your needs
 ###
 ```
 
-Each variable has a comment above them detailing as short as possible what it is used for. 
+Each variable has a comment above it that briefly details what it represents.
 
-## Step 4
-Now you can run *main_The_Cannon.py*! The defaulted settings hopefully only take your machine a hour or less to run. 
+Now you can run CHIP using *main_The_Cannon.py*! The default settings should take roughly an hour or less to run. 
 
-*main_The_Cannon.py* will produce a file called Results.csv. 
+*main_The_Cannon.py* will produce a file called Results.csv. This output file contains diagnostic information about all trained models, and the best model is provided at the bottom of the file.
 
-Results.csv contains useful information about all the models trained and at the bottom of the file is the best model. 
-
-## Step 5
-If you so wish you can plot the results of the best model using Plot_Results.py. 
+## Step 3 (optional)
+To visualize the results from the best model, you can run Plot_Results.py. 
