@@ -27,13 +27,13 @@ past_data_question = False
 ##----------
 #
 
-# Do you want to train The Cannon Models? 
-cannon_q = True 
-
 # N = number of pixels in wavelength file 
 # S = number of stars 
 # A = number of abudances (labels)
 # X = doesn't matter the number 
+
+# Do you want to train The Cannon Models? 
+cannon_q = True 
 
 # Wavelengths for all stars: shape = (N,)
 wavelength_file_path = interpolated_wl.csv
@@ -64,13 +64,12 @@ random_seed = 3
 # Number of parameters to train at the same time: must be a list of int values and cannot be left empty
 group_sizes_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] 
 
-# The % of the stars that will be used as the test set 
+# The % of the stars that will be used as the test set (int)
 testing_percentage = 15
 
-# The % of the training stars that will be used as the validation set
+# The % of the training stars that will be used as the validation set (int)
 validation_percentage = 15
 
 # Name and function for computing loss for model
 loss_metric_name = (mu-mu*)/mu
 loss_metric_fun = lambda true_array,predicted_array:  (np.mean(true_array) - np.mean(predicted_array)) / np.mean(true_array)
-
