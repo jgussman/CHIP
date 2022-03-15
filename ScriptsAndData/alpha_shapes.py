@@ -14,7 +14,7 @@ def AFS_continuum_norm_1order(wv, spec, sigma, wv_to, spec_to, sigma_to, q=0.95,
     # Step zero: set some initial values
     alpha = (1./6.) * (np.max(wv) - np.min(wv))
 
-    # Step 1: rescale intensity vector by u ----------------------
+    # Step 1: rescale scaled flux vector by u ----------------------
     u = (np.max(wv) - np.min(wv))/(10.*np.max(spec))
     spec *= u
     spec_to *= u
