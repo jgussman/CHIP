@@ -48,20 +48,22 @@ ivar_file_path = ivars_for_HIRES.npy
 id_file_path = stellar_names_for_flux_and_ivar.npy
 
 # Masks to apply to all stars; for example: [("Name of Mask","file Path to mask"),...,("No Mask",False)], shape of mask = (N,)
-masks_list = [("No Mask",False)]  # ("iodine","../Constants/Masks/by_eye_iodine_mask.npy"),
+masks_list = [("No Mask",False),("iodine","../Constants/Masks/by_eye_iodine_mask.npy")]  # ,
 
 #Abudances for all the parameters: dataframe with shape = (X,A)
 # The 0th column will be converted to the index!!! This means the 0th column needs to be the identifier corresponding 
 # to the 0th column of the file3 you put in for crossMatchedNames in main_pipeline.py
-abundances_file_path = ../spocData/df_all.csv
+abundances_file_path = ../SPOCSdata/df_all.csv
 
 # Parameter names that reflect the spelling in the file for abundances_file_path
+# 
 parameters = ['TEFF', 'LOGG','VSINI', 'FeH', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH','NiH', 'YH']  
 
 # Random seed for replication
 random_seed = 3
 
 # Number of parameters to train at the same time: must be a list of int values and cannot be left empty
+# 
 group_sizes_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] 
 
 # The % of the stars that will be used as the test set (int)
