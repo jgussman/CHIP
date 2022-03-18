@@ -122,7 +122,7 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
 
 
     num_training_parameters = len(parameters) 
-    results_df = pd.DataFrame(columns=["# Stars","test %","Valid %","Seed","Group Size","Mask","Scale Abun","Loss-Metric"] + [label for label in parameters] + ['Training Groups'])
+    results_df = pd.DataFrame(columns=["# Stars","test %","Valid %","Seed","Group Size","Mask","Scale Abun","Loss-Metric"] + [label for label in parameters])
 
 
 
@@ -170,7 +170,7 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
                         u_abun_train = scaler_instance.fit_transform(abun_train[:,j:k])
                     else:
                         u_abun_train = abun_train
-                        u_abun_valid = abun_valid
+
                     # Training the model
                     ds = dataset.Dataset(wl, id_train, u_flux_train, u_ivar_train, u_abun_train, id_valid, u_flux_valid, u_ivar_valid)
                     ds.set_label_names(group_parameters) 
@@ -240,7 +240,7 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
     # Add your labels to the results
     for label in parameters:
         group_results[label] = float('-inf')
-    group_results['Training Groups'] = training_groups
+    
 
     ## Apply Best Mask
     best_mask_name = best_model["Mask"]
@@ -263,15 +263,15 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
 
 
     ## Best Training Groups 
-    training_groups = best_model["Training Groups"]
-    size = len(training_groups[0])
+    size = best_model["Group Size"]
+    training_groups = TrainingBuddys(parameters,size)
 
     def SaveTrueAndPredicted(true_label,predicted_label,label_name):
         '''
         Save data to npy files 
         '''
         both_true_and_predicted = np.vstack((true_label,predicted_label))
-        np.save(f"Element_Data/{label_name}.npy",both_true_and_predicted)
+        np.save(f"Best_Model_Results/{label_name}.npy",both_true_and_predicted)
 
     # Training and Testing
     for i in range(len(training_groups)):
