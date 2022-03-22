@@ -220,7 +220,6 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
 
     # Find Best Model
     best_model = results_df.iloc[0]
-    num_of_half_parameters = len(parameters)//2
     for row in range(1,results_df.shape[0]):
         print("Row number ",row)
         current_best_model_score = 0
@@ -240,7 +239,7 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
     {best_model}
     ''')
 
-    group_results = IntialParamRecording(best_model["Group Size"],best_model["Test %"],0, best_model["Mask"],best_model["Scale Abun"],best_model["Loss-Metric"])
+    group_results = IntialParamRecording(best_model["Group Size"],testing_percentage,validation_percentage, best_model["Mask"],best_model["Scale Abun"],best_model["Loss-Metric"])
     
     
     ## Apply Best Mask
@@ -264,7 +263,7 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
         both_true_and_predicted = np.vstack((true_label,predicted_label))
         np.save(f"Best_Model_Results/{label_name}.npy",both_true_and_predicted)
 
-    # Training and Testing
+    # Training 
     for i in range(len(training_groups)):
         group_parameters = training_groups[i]
         j = size*i
