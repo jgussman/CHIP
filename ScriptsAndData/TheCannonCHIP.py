@@ -220,17 +220,15 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
 
     # Find Best Model
     best_model = results_df.iloc[0]
+    num_of_half_parameters = len(parameters)//2
     for row in range(1,results_df.shape[0]):
-        print("Row number ",row)
-        current_best_model_score = 0
-        temp_model_score         = 0 
         temp_model = results_df.iloc[row]
 
         #Compare the current best model and the next model
         #which ever model does performs better on more parameters 
         #will be the best model 
         curr_model_score = np.sum(np.abs(best_model[parameters]) < np.abs(temp_model[parameters])) 
-        if curr_model_score < num_training_parameters:
+        if curr_model_score < num_of_half_parameters:
             best_model = temp_model
             
 

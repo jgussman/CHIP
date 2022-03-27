@@ -10,7 +10,7 @@ import pandas as pd
 ###
 ###Anything BELOW this point (to the stop point) can be editted to work with your needs
 ###
-folder_location = "Element_Data" #The folder where results of the best model ended up
+folder_location = "Best_Model_Results" #The folder where results of the best model ended up
 ###
 ###Anything ABOVE this point (to the start point) can be editted to work with your needs
 ###
