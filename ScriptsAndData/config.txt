@@ -56,18 +56,18 @@ masks_list = [("No Mask",False),("iodine","../Constants/Masks/by_eye_iodine_mask
 abundances_file_path = ../SPOCSdata/df_all.csv
 
 # Parameter names that reflect the spelling in the file for abundances_file_path
-# 
-parameters = ['TEFF', 'LOGG','VSINI', 'FeH', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH','NiH', 'YH']  
+# , 'LOGG','VSINI', 'FeH', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH','NiH', 'YH'
+parameters = ['TEFF']  
 
 # Random seed for replication
 random_seed = 3
 
 # Number of parameters to train at the same time: must be a list of int values and cannot be left empty
-# 
-group_sizes_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] 
+# ,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+group_sizes_list = [1] 
 
 # The % of the stars that will be used as the test set (int)
-testing_percentage = 20
+testing_percentage = 80
 
 # The % of the training stars that will be used as the validation set (int)
 validation_percentage = 15

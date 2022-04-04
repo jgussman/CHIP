@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 # from numpy.core.defchararray import capitalize, index
 # from numpy.core.fromnumeric import size 
 from scipy import stats
+from matplotlib.ticker import AutoMinorLocator
 import glob
 # import matplotlib.ticker as ticker
 import pandas as pd 
+import matplotlib.gridspec as gridspec
 
 ###
 ###Anything BELOW this point (to the stop point) can be editted to work with your needs
@@ -80,6 +82,7 @@ for path in glob.glob(folder_location+"/*.npy"):
     mean_values["mu Predicted"].append(p_mu)
     mean_values["mu SPOC"].append(t_mu)
     mean_values["Relative Difference"].append(Relative_difference(t_mu,p_mu))
+    plt.close() #Closes plot 
     
 
 mean_values = pd.DataFrame.from_dict(mean_values)
@@ -98,10 +101,12 @@ import matplotlib.pyplot as plt
 from scipy import stats
 import glob
 
-fontsize = 12
+fontsize = 50
 i = 0
 j = 0
 fig, axs = plt.subplots(3, 6,figsize = (16,8)) # (# of rows, # of cols)
+gs1 = gridspec.GridSpec(16,8)
+gs1.update(wspace=0.025, hspace=0.05)
 
 o = 0
 for path in glob.glob(folder_location+"/*.npy"):
@@ -113,7 +118,7 @@ for path in glob.glob(folder_location+"/*.npy"):
         element = '[' + element.replace("H","") + "/H]"
     else:
         if element == "LOGG":
-            element = r"$log g$ $[cm/s^2]$"
+            element = r"log$g$ $[cm/s^2]$"
         elif element == "TEFF":
             element = r"$T_{eff}$ $[K]$"
         elif element == "VSINI":
@@ -121,28 +126,58 @@ for path in glob.glob(folder_location+"/*.npy"):
 
     true_data,predicted_data = np.load(path)
     sigma = np.std(np.load(path)) #Re-dun but idc
-    axs[i,j].set_title(f"{element}, " + r"$\sigma = $" + f"{sigma:.2f}",size=10)
+    #axs[i,j].set_title(f"{element}, " + r"$\sigma = $" + f"{sigma:.2f}",size=10) # With Sigma 
+    axs[i,j].set_title(f"{element}",size=10) #Without sigma 
 
-    axs[i,j].scatter(true_data,predicted_data,alpha=0.2,c="dodgerblue",s=40)
+    axs[i,j].scatter(true_data,predicted_data,alpha=0.2,c="blue",s=40)
     res = stats.linregress(true_data,predicted_data)
     
-    minn = min(np.min(true_data),np.min(predicted_data)) - 0.2
-    maxx = max(np.max(true_data),np.max(predicted_data)) + 0.2
+    minn = min(np.min(true_data),np.min(predicted_data)) - 0.1
+    maxx = max(np.max(true_data),np.max(predicted_data)) + 0.1
     if element == r"$T_{eff}$ $[K]$":
         minn -= 100
         maxx += 100
-    elif element == r"$v\sin i$ $[km/s]$":
+    elif element == r"$V\sin i$ $[km/s]$":
         minn -= 1
         maxx += 1
-
-    axs[i,j].plot([minn,maxx], np.array([minn,maxx]), c= 'crimson', label='One-to-One')
+    
+    
+    axs[i,j].plot([minn,maxx], np.array([minn,maxx]), c= 'hotpink', label='One-to-One')
     axs[i,j].set_xlim([minn,maxx])
     axs[i,j].set_ylim([minn,maxx])
-    axs[i,j].tick_params(axis='both',length=10,labelsize=15)
     
-    #Line of Best Fit
-    m,b = np.polyfit(true_data,predicted_data,1) 
-    axs[i,j].plot([minn,maxx],m*np.array([minn,maxx]) + b,c="grey", label="Linear Regression")
+    axs[i,j].tick_params(bottom=True, top=True, left=True, right=True)
+    axs[i,j].tick_params(labelbottom=True, labeltop=False, labelleft=True, labelright=False)
+    axs[i,j].tick_params(axis='both',
+                        direction="in",
+                        which='major',
+                        length=3,
+                        width=1)
+    axs[i,j].tick_params(axis='both',
+                    direction="in",
+                    which='minor',
+                    top=True,
+                    right=True)
+    axs[i,j].xaxis.set_major_locator(plt.MaxNLocator(6))
+    axs[i,j].yaxis.set_major_locator(plt.MaxNLocator(6))
+
+
+    axs[i,j].xaxis.set_minor_locator(AutoMinorLocator())
+    axs[i,j].yaxis.set_minor_locator(AutoMinorLocator())
+    # axs[i,j].tick_params(axis="x", direction="in")
+    # axs[i,j].tick_params(axis="y", direction="in")
+    axs[i,j].xaxis.set_tick_params(labelsize=8)
+    axs[i,j].yaxis.set_tick_params(labelsize=8)
+
+    
+    
+
+
+    #axs[i,j].tick_params(axis='both',length=10,labelsize=15)
+    
+    # #Line of Best Fit
+    # m,b = np.polyfit(true_data,predicted_data,1) 
+    # axs[i,j].plot([minn,maxx],m*np.array([minn,maxx]) + b,c="grey", label="Linear Regression")
 
     if i == 2:
         i=0
@@ -151,9 +186,12 @@ for path in glob.glob(folder_location+"/*.npy"):
         i+=1
     
     if j==6:
-        fig.text(0.503, 0.01, 'SPOC Value', ha='center', va='center')
-        fig.text(0.01, 0.5, "The Cannon's Predicted Value", ha='center', va='center', rotation='vertical')
-        plt.tight_layout()
-        plt.savefig("Element_Data/All_in_one.png",dpi=300)
+        
+        plt.subplots_adjust(left  = 0.05,right = 0.981,bottom = 0.052,top = 0.957,wspace = 0.205,hspace = 0.205)
+        
+        fig.text(0.503, 0.01, 'SPOCS Label', ha='center', va='center',size=20)
+        fig.text(0.009, 0.5, "The Cannon Label", ha='center', va='center', rotation='vertical',size=20)
+        #plt.tight_layout()
+        plt.savefig(f"{folder_location}/All_in_one.png",dpi=300)
         plt.show()
     

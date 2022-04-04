@@ -8,6 +8,7 @@ from scipy import stats
 from TheCannon import model
 from TheCannon import dataset
 import TheCannon
+import pickle 
 
 def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_path,masks_list,abundances_file_path,parameters,random_seed,group_sizes_list,testing_percentage, validation_percentage, loss_metric_name, loss_metric_fun):
     '''
@@ -295,9 +296,23 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
 
                 group_results[parameters[j+y]] = loss_metric_fun(abun_test[:,j+y],u_infered_test_labels[:,y])
                 SaveTrueAndPredicted(abun_test[:,j+y],u_infered_test_labels[:,y],parameters[j+y])
-        results_df = results_df.append([group_results])
+    results_df = results_df.append([group_results])
+
+    # Save ML model 
+    # md.save_model(f"Best_Model_Results/{best_model['Mask']}_{best_model['Scale Abun']}_{best_model['Group Size']}_{best_model['Loss-Metric']}.pkl")
+
+
+    # Use Pickle to save ML model
+    # save the model to disk
+    filename = f"Best_Model_Results/{testing_percentage}_{best_model['Mask']}_{best_mask_name}_{best_scaler_name}_{size}_{best_model['Loss-Metric']}.sav"
+    pickle.dump(model, open(filename, 'wb'))
+
+
         
     results_df.to_csv("Results",index=False)
-    print("The very last model added to Results.csv is the model trained with the best hyperparameters and whole training set (including the validation set)")
-    print("Run Plot_Results.py to graph the results")
+    print(f'''The very last model added to Results.csv is the model trained with the best hyperparameters and whole training set (including the validation set).
+        -All the best model's results and the model itself can be found in the Best_Model_Results folder. 
+
+        "# Stars","Test %","Valid %","Seed"
+        The model's name is {testing_percentage}_{best_model['Mask']}_{best_mask_name}_{best_scaler_name}_{size}_{best_model['Loss-Metric']}.sav''')
 
