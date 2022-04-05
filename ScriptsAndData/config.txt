@@ -48,7 +48,8 @@ ivar_file_path = ivars_for_HIRES.npy
 id_file_path = stellar_names_for_flux_and_ivar.npy
 
 # Masks to apply to all stars; for example: [("Name of Mask","file Path to mask"),...,("No Mask",False)], shape of mask = (N,)
-masks_list = [("No Mask",False),("iodine","../Constants/Masks/by_eye_iodine_mask.npy")]  # ,
+# ,
+masks_list = [("No Mask",False),("iodine","../Constants/Masks/by_eye_iodine_mask.npy")]  
 
 #Abudances for all the parameters: dataframe with shape = (X,A)
 # The 0th column will be converted to the index!!! This means the 0th column needs to be the identifier corresponding 

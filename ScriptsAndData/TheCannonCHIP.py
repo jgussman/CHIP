@@ -304,15 +304,13 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
 
     # Use Pickle to save ML model
     # save the model to disk
-    filename = f"Best_Model_Results/{testing_percentage}_{best_model['Mask']}_{best_mask_name}_{best_scaler_name}_{size}_{best_model['Loss-Metric']}.sav"
-    pickle.dump(model, open(filename, 'wb'))
+    filename = f"Best_Model_Results/{testing_percentage}_{best_model['Mask']}_{best_mask_name}_{best_scaler_name}_{size}_{best_model['Loss-Metric']}.pkl"
+    pickle.dump(model, filename)
 
 
         
     results_df.to_csv("Results",index=False)
     print(f'''The very last model added to Results.csv is the model trained with the best hyperparameters and whole training set (including the validation set).
-        -All the best model's results and the model itself can be found in the Best_Model_Results folder. 
-
-        "# Stars","Test %","Valid %","Seed"
-        The model's name is {testing_percentage}_{best_model['Mask']}_{best_mask_name}_{best_scaler_name}_{size}_{best_model['Loss-Metric']}.sav''')
+        -All the best model's results and the model itself can be found in the Best_Model_Results folder. 33
+        The model's name is {filename}''')
 
