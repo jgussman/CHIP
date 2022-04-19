@@ -11,3 +11,4 @@ scipy==1.5.2
 PyAstronomy==0.16.0
 scikit_learn==0.24.2
 TheCannon==0.7.3
+pickle-mixin==1.0.2

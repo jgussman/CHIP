@@ -5,13 +5,13 @@
 #
 
 # Do you want to run CHIP?
-run_CHIP_q = False
+run_CHIP_q = True
 
 # Cross Match Names file path ---> this txt file must have two columns seperated by a space with headers, one 
 #                                  of the columns will the names of the stars in the catalogue you want. The 
 #                                  other column must have the column name as "HIRES" and contain the names of
 #                                  the HIRES identification for the stars. 
-crossMatchStarsFilePath = ../SPOCSdata/testStars.txt
+crossMatchStarsFilePath = ../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt
 
 # Alpha Normalization ---> Would you like to use the alpha normalization techinque to normalize your spectra?
 alpha_question = True 
@@ -33,7 +33,7 @@ past_data_question = False
 # X = doesn't matter the number 
 
 # Do you want to train The Cannon Models? 
-cannon_q = True 
+cannon_q = False 
 
 # Wavelengths for all stars: shape = (N,)
 wavelength_file_path = interpolated_wl.csv

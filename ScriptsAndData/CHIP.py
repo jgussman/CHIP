@@ -107,7 +107,8 @@ class CHIP:
                     hiresName_fileName_rv_dic["RV"] += [pd.NA]
                     hiresName_fileName_rv_dic["FILENAME"] += [pd.NA]
             except OSError: #This error occurs because for some reason the star's rvcurve wasn't created
-                    #This is for removing these stars that have no RV metadata  
+                    #This is for removing these stars that have no RV metadata 
+                     
                     hiresName_fileName_rv_dic["RV"] += [pd.NA]
                     hiresName_fileName_rv_dic["FILENAME"] += [pd.NA]
         df = pd.DataFrame(hiresName_fileName_rv_dic) 
