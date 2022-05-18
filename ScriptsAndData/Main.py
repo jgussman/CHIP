@@ -7,17 +7,16 @@ from TheCannonCHIP import TheCannonCHIP
 config_values_array = np.loadtxt("config.txt", dtype=str, delimiter='=', usecols=(1))
 
 #CHIP 
-chip_q = config_values_array[0].replace(" ","").lower() == "true"
+chip_q = config_values_array[0].replace(" ","").lower()[0] == "t"
 if chip_q:
-    config_values_array = np.loadtxt("config.txt", dtype=str, delimiter='=', usecols=(1))
-    crossMatchedNames = pd.read_csv(config_values_array[1],sep=" ")
+    crossMatchedNames = pd.read_csv(config_values_array[1].replace(" ",""),sep=" ")
     hiresNames = crossMatchedNames["HIRES"].to_numpy()
     chipObject = CHIP(hiresNames)
-    past_q = (config_values_array[3].replace(" ","").lower() == "True")
-    alpha_q = (config_values_array[2].replace(" ","").lower() == "True")
+    past_q = (config_values_array[3].replace(" ","").lower()[0] == "t")
+    alpha_q = (config_values_array[2].replace(" ","").lower()[0] == "t")
     chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q)
     print('''               ****************
-            Check the Spectra in fluex_for_HIRES.npy to ensure they are correct!
+            Check the Spectra in fluxes_for_HIRES.npy to ensure they are correct!
             Their wavelength is in interpolated_wl.csv. 
                             ****************
                 ''')
@@ -26,7 +25,7 @@ if chip_q:
 
 
 #The Cannon 
-cannon_q = config_values_array[4].replace(" ","").lower() == "true"
+cannon_q = config_values_array[4].replace(" ","").lower()[0] == "t"
 
 
 if cannon_q:
