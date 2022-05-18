@@ -35,11 +35,11 @@ for path in glob.glob(folder_location+"/*.npy"):
         element = '[' + element.replace("H","") + "/H]"
     else:
         if element == "LOGG":
-            element = r"$log g$ $[cm/s^2]$"
+            element = r"$log g$"
         elif element == "TEFF":
-            element = r"$T_{eff}$ $[K]$"
+            element = r"Teff"
         elif element == "VSINI":
-            element = r"$v\sin i$ $[km/s]$"
+            element = r"V sin i"
     fig = plt.figure(figsize=(9, 9))
 
     ax1 = fig.add_subplot()
@@ -55,10 +55,11 @@ for path in glob.glob(folder_location+"/*.npy"):
     
     minn = min(np.min(true_data),np.min(predicted_data)) - 0.2
     maxx = max(np.max(true_data),np.max(predicted_data)) + 0.2
-    if element == r"$T_{eff}$ $[K]$":
+    # Adjust the boundaries to make the plots look nice
+    if element == r"Teff":
         minn -= 100
         maxx += 100
-    elif element == r"$v\sin i$ $[km/s]$":
+    elif element == r"V sin i":
         minn -= 1
         maxx += 1
 
@@ -79,19 +80,24 @@ for path in glob.glob(folder_location+"/*.npy"):
     mean_values["Parameter"].append(element.replace('[','').replace(']',''))
     p_mu = np.mean(predicted_data)
     t_mu = np.mean(true_data)
+
     mean_values["mu Predicted"].append(p_mu)
     mean_values["mu SPOC"].append(t_mu)
     mean_values["Relative Difference"].append(Relative_difference(t_mu,p_mu))
     plt.close() #Closes plot 
-    
 
 mean_values = pd.DataFrame.from_dict(mean_values)
+#mean_values = np.round(mean_values,2)
 
 caption = "The mean values for each stellar parameters along with the relative difference between the SPOC value and the predicted value."
-print(mean_values.to_latex(index=False,caption=caption))
+
+latex_str = mean_values.to_latex(index=False,caption=caption)
+latex_str = latex_str.replace("Teff", "$T_{eff}$ ")
+latex_str = latex_str.replace("V sin i", "$V \sin i$ ")
+latex_str = latex_str.replace("\$log g\$", "$\log g$")
 
 
-
+print(latex_str)
 
 
 
@@ -170,9 +176,6 @@ for path in glob.glob(folder_location+"/*.npy"):
     axs[i,j].yaxis.set_tick_params(labelsize=8)
 
     
-    
-
-
     #axs[i,j].tick_params(axis='both',length=10,labelsize=15)
     
     # #Line of Best Fit
@@ -194,4 +197,5 @@ for path in glob.glob(folder_location+"/*.npy"):
         #plt.tight_layout()
         plt.savefig(f"{folder_location}/All_in_one.png",dpi=300)
         plt.show()
+    
     
