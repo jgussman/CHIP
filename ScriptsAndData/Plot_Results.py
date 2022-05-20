@@ -17,7 +17,7 @@ folder_location = "Best_Model_Results" #The folder where results of the best mod
 ###Anything ABOVE this point (to the start point) can be editted to work with your needs
 ###
 
-mean_values = {"Parameter":[],"mu Predicted":[],"mu SPOC":[],"Relative Difference":[]}
+mean_values = {"Parameter":[],"mu Predicted":[],"std Predicted":[],"mu SPOC":[],"std SPOC":[],"Relative Difference":[]}
 
 
 def Relative_difference(true,preditcted):
@@ -80,14 +80,20 @@ for path in glob.glob(folder_location+"/*.npy"):
     mean_values["Parameter"].append(element.replace('[','').replace(']',''))
     p_mu = np.mean(predicted_data)
     t_mu = np.mean(true_data)
+    p_std = np.std(predicted_data)
+    t_std = np.std(true_data)
 
     mean_values["mu Predicted"].append(p_mu)
+    mean_values["std Predicted"].append(p_std)
     mean_values["mu SPOC"].append(t_mu)
+    mean_values["std SPOC"].append(t_std)
+    
     mean_values["Relative Difference"].append(Relative_difference(t_mu,p_mu))
+
     plt.close() #Closes plot 
 
 mean_values = pd.DataFrame.from_dict(mean_values)
-#mean_values = np.round(mean_values,2)
+mean_values = np.round(mean_values,3)
 
 caption = "The mean values for each stellar parameters along with the relative difference between the SPOC value and the predicted value."
 

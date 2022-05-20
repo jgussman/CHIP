@@ -14,7 +14,7 @@ run_CHIP_q = True
 crossMatchStarsFilePath = ../SPOCSdata/testStars.txt
 
 # Alpha Normalization ---> Would you like to use the alpha normalization techinque to normalize your spectra?
-alpha_question = False
+alpha_question = True
 
 # Use Past Data ---> Would you like to use the data CHIP produced in your last run of CHIP.py? 
 past_data_question = False 
@@ -33,7 +33,7 @@ past_data_question = False
 # X = doesn't matter the number 
 
 # Do you want to train The Cannon Models? 
-cannon_q = False 
+cannon_q = True
 
 # Wavelengths for all stars: shape = (N,)
 wavelength_file_path = interpolated_wl.csv
