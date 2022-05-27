@@ -196,10 +196,10 @@ for path in glob.glob(folder_location+"/*.npy"):
     
     if j==6:
         
-        plt.subplots_adjust(left  = 0.05,right = 0.981,bottom = 0.052,top = 0.957,wspace = 0.205,hspace = 0.205)
+        plt.subplots_adjust(left  = 0.05,right = 0.981,bottom = 0.06,top = 0.957,wspace = 0.205,hspace = 0.205)
         
-        fig.text(0.503, 0.01, 'SPOCS Label', ha='center', va='center',size=20)
-        fig.text(0.009, 0.5, "The Cannon Label", ha='center', va='center', rotation='vertical',size=20)
+        fig.text(0.503, 0.015, 'SPOCS Label', ha='center', va='center',size=20)
+        fig.text(0.011, 0.5, "The Cannon Label", ha='center', va='center', rotation='vertical',size=20)
         #plt.tight_layout()
         plt.savefig(f"{folder_location}/All_in_one.png",dpi=300)
         plt.show()
