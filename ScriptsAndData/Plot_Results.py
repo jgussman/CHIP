@@ -17,7 +17,23 @@ folder_location = "Best_Model_Results" #The folder where results of the best mod
 ###Anything ABOVE this point (to the start point) can be editted to work with your needs
 ###
 
-mean_values = {"Parameter":[],"mu Predicted":[],"std Predicted":[],"mu SPOC":[],"std SPOC":[],"Relative Difference":[]}
+#metrics = {"Parameter":[],"mu Predicted":[],"std Predicted":[],"mu SPOC":[],"std SPOC":[],"Relative Difference":[]}
+metrics = {"Parameter":[],"mean(Cannon value - SPOCS value)":[]
+                         ,"std(Cannon value - SPOCS value)":[]
+                         ,"Rice std":[]
+                         ,"Brewer std":[]
+                         ,"Relative Difference":[]} 
+
+
+rice_std = {"Y/H":0.08,"Ni/H":0.04,"Fe/H":0.03,"Mn/H":0.05,"Cr/H":0.04,"V/H":0.06,"Ti/H":0.04,
+"Ca/H":0.03,"Si/H":0.03,"Al/H":0.04,"Mg/H":0.04,"Na/H":0.05,"O/H":0.07,"N/H":0.08,
+"C/H":0.05,"Teff":56,r"$log g$":0.09,r"V sin i":0.87}
+
+brewer_std = {"Y/H":0.015,"Ni/H":0.006,"Fe/H":0.005,"Mn/H":0.01,"Cr/H":0.007,"V/H":0.017,"Ti/H":0.006,
+"Ca/H":0.007,"Si/H":0.004,"Al/H":0.014,"Mg/H":0.006,"Na/H":0.007,"O/H":0.018,"N/H":0.021,
+"C/H":0.013,"Teff":12.5,r"$log g$":0.014,r"V sin i":0.35}
+
+
 
 
 def Relative_difference(true,preditcted):
@@ -73,33 +89,42 @@ for path in glob.glob(folder_location+"/*.npy"):
     ax1.plot([minn,maxx],m*np.array([minn,maxx]) + b,c="grey", label="Linear Best Fit")
 
     plt.legend()
-    plt.savefig(folder_location + f"/{nameWithoutBrackets}",dpi=300)
-    print(nameWithoutBrackets) 
+    #plt.savefig(folder_location + f"/{nameWithoutBrackets}",dpi=300)
+    #print(nameWithoutBrackets) 
    
     #Save values for table
-    mean_values["Parameter"].append(element.replace('[','').replace(']',''))
+    element = element.replace('[','').replace(']','')
+    metrics["Parameter"].append(element)
     p_mu = np.mean(predicted_data)
     t_mu = np.mean(true_data)
-    p_std = np.std(predicted_data)
-    t_std = np.std(true_data)
+    # p_std = np.std(predicted_data)
+    # t_std = np.std(true_data)
 
-    mean_values["mu Predicted"].append(p_mu)
-    mean_values["std Predicted"].append(p_std)
-    mean_values["mu SPOC"].append(t_mu)
-    mean_values["std SPOC"].append(t_std)
+    # metrics["mu Predicted"].append(p_mu)
+    # metrics["std Predicted"].append(p_std)
+    # metrics["mu SPOC"].append(t_mu)
+    # metrics["std SPOC"].append(t_std)
     
-    mean_values["Relative Difference"].append(Relative_difference(t_mu,p_mu))
+
+    difference = predicted_data - true_data
+
+    metrics["Relative Difference"].append(Relative_difference(t_mu,p_mu))
+    metrics["mean(Cannon value - SPOCS value)"].append(np.mean(difference))
+    metrics["std(Cannon value - SPOCS value)"].append(np.std(difference))
+    metrics["Rice std"].append(rice_std[element])
+    metrics["Brewer std"].append(brewer_std[element])
+
 
     plt.close() #Closes plot 
 
-mean_values = pd.DataFrame.from_dict(mean_values)
-mean_values = np.round(mean_values,3)
+metrics = pd.DataFrame.from_dict(metrics)
+metrics = np.round(metrics,3)
 
 caption = "The mean values for each stellar parameters along with the relative difference between the SPOC value and the predicted value."
 
-latex_str = mean_values.to_latex(index=False,caption=caption)
-latex_str = latex_str.replace("Teff", "$T_{eff}$ ")
-latex_str = latex_str.replace("V sin i", "$V \sin i$ ")
+latex_str = metrics.to_latex(index=False,caption=caption)
+latex_str = latex_str.replace("Teff", "$T_{\rm eff}$ ")
+latex_str = latex_str.replace("V sin i", "$v \sin i$ ")
 latex_str = latex_str.replace("\$log g\$", "$\log g$")
 
 
