@@ -11,7 +11,7 @@ run_CHIP_q = True
 #                                  of the columns will the names of the stars in the catalogue you want. The 
 #                                  other column must have the column name as "HIRES" and contain the names of
 #                                  the HIRES identification for the stars. 
-crossMatchStarsFilePath = ../SPOCSdata/testStars.txt
+crossMatchStarsFilePath = ../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt
 
 # Alpha Normalization ---> Would you like to use the alpha normalization techinque to normalize your spectra?
 alpha_question = True
@@ -33,7 +33,7 @@ past_data_question = False
 # X = doesn't matter the number 
 
 # Do you want to train The Cannon Models? 
-cannon_q = True
+cannon_q = False
 
 # Wavelengths for all stars: shape = (N,)
 wavelength_file_path = interpolated_wl.csv
@@ -57,15 +57,15 @@ masks_list = [("No Mask",False),("iodine","../Constants/Masks/by_eye_iodine_mask
 abundances_file_path = ../SPOCSdata/df_all.csv
 
 # Parameter names that reflect the spelling in the file for abundances_file_path
-# , 'LOGG','VSINI', 'FeH', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH','NiH', 'YH'
-parameters = ['TEFF']  
+# 
+parameters = ['TEFF', 'LOGG','VSINI', 'FeH', 'CH', 'NH','OH','NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH','NiH', 'YH']  
 
 # Random seed for replication
 random_seed = 3
 
 # Number of parameters to train at the same time: must be a list of int values and cannot be left empty
-# ,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
-group_sizes_list = [1] 
+# 
+group_sizes_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] 
 
 # The % of the stars that will be used as the test set (int)
 testing_percentage = 80
@@ -74,5 +74,5 @@ testing_percentage = 80
 validation_percentage = 15
 
 # Name and function for computing loss for model
-loss_metric_name = (mu-mu*)/mu
-loss_metric_fun = lambda true_array,predicted_array:  (np.mean(true_array) - np.mean(predicted_array)) / np.mean(true_array)
+loss_metric_name = MSE
+loss_metric_fun = lambda true_array,predicted_array:  np.mean(true_array - predicted_array)

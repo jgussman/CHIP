@@ -12,7 +12,9 @@ from scipy import interpolate
 
 import numpy as np
 import pandas as pd 
-import time 
+import os
+
+
 np.random.seed(3)
 class CHIP:
 
@@ -40,14 +42,16 @@ class CHIP:
         self.wl_solution = np.genfromtxt(wl_solution_path,skip_header=2)   # UNITS: Angstrom
         self.Ivar = {}                                                     # For storing sigma valeus 
         self.filename_rv_df = pd.DataFrame()                               # For storing meta Data
+        self.spectraDic = {}                                               # For storing spectra filenames
+        
+        
         
     
     def Run(self,use_past_data=False,alpha_normalize = False ):
         '''
         Description: This method will run all of the following
             Unless parameter is set to True
-             Find_and_download_all_rv_obs -> 
-             DownloadSpectra ->
+             find_rv_obs_with_highest_snr -> 
              Continuum Normalize ->
              CrossCorrelate -> 
              Interpolate 
@@ -58,8 +62,8 @@ class CHIP:
                         700 stars will take ~48 hours. Plus shipping and handling.
         '''
         if not use_past_data:
-            self.Find_and_download_all_rv_obs()
-            self.DownloadSpectra()
+            self.find_rv_obs_with_highest_snr()
+            # self.DownloadSpectra()
         else:
             self.NoDownload()
         if not alpha_normalize:
@@ -69,8 +73,92 @@ class CHIP:
         self.CrossCorrelate()
         self.Interpolate()
 
+    def calculate_SNR(spectrum):
+        spectrum = spectrum[7:10].flatten() # Using echelle orders in the middle 
+        SNR = np.mean(np.sqrt(spectrum))
+        return SNR 
 
-    def Find_and_download_all_rv_obs(self):
+    def DeleteSpectrum(self,filename):
+
+        #print(f"Deleting {filename}.fits")
+        file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
+        os.remove(file_path)
+
+
+    def find_rv_obs_with_highest_snr(self):
+        hiresName_fileName_snr_dic = {"HIRESName": [],"FILENAME":[],"SNR":[]}  
+        removed_stars = {"no RV observations":0,"rvcurve wasn't created":0, "SNR < 100":0,"NAN value in spectra":0}
+        rvDownloadLocation = self.dataRV.localdir
+
+        for name in self.star_ID_array:
+            #Make sure the data is in workspace
+            
+            try:
+                rtn = self.dataRV.rvcurve(name)
+                local_path = os.path.join(rvDownloadLocation, "vst" + name + ".csv")
+                temp_df = pd.read_csv(local_path)
+                
+                # THIS REMOVE IS UNTESTED
+                os.remove(local_path)
+                
+                if not temp_df.empty:
+                    filenames = temp_df['FILENAME'].to_numpy()
+                    
+                    # Get the spectrum with the largest SNR 
+                    best_SNR = (np.nan,0,np.nan)
+                    for filename in filenames:
+                        temp_spec = self.DownloadSpectrum(filename)
+                        temp_SNR = self.calculate_SNR(temp_spec)
+                        
+                        if type(best_SNR[0]) != str:
+                            best_SNR = (filename, temp_SNR,temp_spec)
+                        elif temp_SNR > best_SNR[1]:
+                            best_SNR = (filename, temp_SNR,temp_spec)
+                            self.DeleteSpectrum(best_SNR[0])
+                        else:
+                            del temp_spec
+                            self.DeleteSpectrum(filename)
+                    
+                    
+                    best_spectrum = best_SNR[2].flatten()
+                    if best_SNR[1] < 100:
+                        removed_stars["SNR < 100"] += 1 
+                        filename_to_delete = best_SNR[0]
+                        del best_SNR
+                        self.DeleteSpectrum(filename_to_delete)
+                    elif np.isnan(best_spectrum.flatten()).any():
+                        removed_stars["NAN value in spectra"] += 1
+                        filename_to_delete = best_SNR[0]
+                        del best_SNR
+                        self.DeleteSpectrum(filename_to_delete)
+                    else:
+                        hiresName_fileName_snr_dic["HIRESName"].append(name)
+                        hiresName_fileName_snr_dic["FILENAME"].append(best_SNR[0])
+                        hiresName_fileName_snr_dic["SNR"].append(best_SNR[1])
+                        del best_SNR
+                        self.spectraDic[filename] = best_spectrum
+
+                        
+                        self.SigmaCalculation(best_SNR[0]) #To get the sigma for Inverse variance 
+                        
+                else:
+                    removed_stars["no RV observations"] +=1 
+
+            except OSError: #This error occurs because for some reason the star's rvcurve wasn't created
+                    #This is for removing these stars that have no RV metadata 
+                    removed_stars["rvcurve wasn't created"] += 1
+                    
+
+
+
+        df = pd.DataFrame(hiresName_fileName_snr_dic) 
+        filename_snr_df = df.dropna() #If you don't drop the na's then other methods will break
+        filename_snr_df.to_csv("HIRES_Filename_snr.csv",index_label=False,index=False)
+        print(removed_stars)
+        print("Downloading Spectra Has Finished")
+
+
+    def find_and_download_all_rv_obs(self):
         '''            
         Description: This method downloads the rotational velocity metadata and
         returns a dictionary that makes it easy to identify what stars' rotational 
@@ -95,6 +183,7 @@ class CHIP:
                 rtn = self.dataRV.rvcurve(name)
                 nameLoc = '{0}/vst{1}.csv'.format(rvDownloadLocation,name)
                 temp_df = pd.read_csv(nameLoc)
+
                 if not temp_df.empty:
                     rv_temp = abs(temp_df['RV'])
                     row = temp_df[temp_df['RV'] == rv_temp.max()]
@@ -117,6 +206,25 @@ class CHIP:
         print("Downloading RV Data Has Finished")
         
 
+    def DownloadSpectrum(self,filename):
+
+        '''Download Individual Spectrum and ivar 
+
+        Input: filename (str): name of spectrum you want to download 
+
+        Output: None
+        '''
+        #print(f"Downloading {filename}")
+        self.dataSpectra.spectrum(filename.replace("r",""))  #Download spectra  
+        file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
+        temp_deblazedFlux = fits.getdata(file_path)
+
+        return temp_deblazedFlux
+
+
+
+
+
     def DownloadSpectra(self):
         '''
         Description: This method downloads all the deblazed spectra from HIRES that are in
@@ -125,6 +233,7 @@ class CHIP:
         print("Downloading Spectra Has Began")
         self.spectraDic = {} 
         download_Location = self.dataSpectra.localdir #This is the second parameter of hiresprv.download.Download
+
 
         for filename in self.filename_rv_df["FILENAME"]:
             #I tried to use the , seperation and new line seperation 
@@ -142,6 +251,9 @@ class CHIP:
             else:
                 print(f"****{filename} HAS BEEN REMOVED BECAUSE IT CONTAINS NAN VALUES")   
         print("Downloading Spectra Has Finished")
+    
+
+        
 
     def ContinuumNormalize(self):
         '''        
@@ -408,13 +520,15 @@ class CHIP:
         print("Completed Retrieving past data")        
              
 if __name__ == '__main__':
-    start_time = time.time()
+    # start_time = time.time()
     config_values_array = np.loadtxt("config.txt", dtype=str, delimiter='=', usecols=(1))
     crossMatchedNames = pd.read_csv(config_values_array[0],sep=" ")
     hiresNames = crossMatchedNames["HIRES"].to_numpy()
     chipObject = CHIP(hiresNames)
+    
     past_q = (config_values_array[2].replace(" ","") == "True")
     alpha_q = (config_values_array[1].replace(" ","") == "True")
-    chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q)
-    time_elap = time.time() - start_time 
-    print(f"CHIP took {time_elap/60} minutes!")
+    #chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q)
+    chipObject.find_and_download_all_rv_obs()
+    # time_elap = time.time() - start_time 
+    # print(f"CHIP took {time_elap/60} minutes!")

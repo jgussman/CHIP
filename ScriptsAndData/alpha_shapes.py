@@ -249,7 +249,7 @@ def plot_alpha_shape_fit(wv, spec, alpha_shape, AS_tilde, W_alpha):
     plt.show()
 
 
-def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=True):
+def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=False):
 
     spec_norm, sigma_norm, cfit = AFS_continuum_norm_1star(wv_raw, spec_raw, sigma_raw)
 
@@ -263,8 +263,8 @@ def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=Tru
         plt.clf()
         plt.close()
 
-    # Save continuum fit
-    np.save(save_dir+'%s_cfit.npy' %(starname), cfit)
+    # # Save continuum fit
+    # np.save(save_dir+'%s_cfit.npy' %(starname), cfit)
 
     # Save spectrum
     np.save(save_dir+'%s_specnorm.npy' %(starname), spec_norm)
@@ -272,12 +272,13 @@ def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=Tru
 
     # Preprocessing step: Get rid of all large peaks that will create problems for interpolation
     spec_norm_nopeaks = np.zeros(len(spec_norm[0]))
-    for spec_norm_1order in spec_norm:
-        spec_norm_nopeaks = np.vstack((spec_norm_nopeaks, remove_spurious_peaks(spec_norm_1order, threshold=1.2)))
-    spec_norm_nopeaks = spec_norm_nopeaks[1:]
+    if plot == True: # If you want to use normalized spectra with no peaks 
+        for spec_norm_1order in spec_norm:
+            spec_norm_nopeaks = np.vstack((spec_norm_nopeaks, remove_spurious_peaks(spec_norm_1order, threshold=1.2)))
+        spec_norm_nopeaks = spec_norm_nopeaks[1:]
 
-    # Save spectrum, no peaks
-    np.save(save_dir+'%s_specnorm_nopeaks.npy' %(starname), spec_norm_nopeaks)
+        # Save spectrum, no peaks
+        np.save(save_dir+'%s_specnorm_nopeaks.npy' %(starname), spec_norm_nopeaks)
 
     # Save uncertainty
     np.save(save_dir+'%s_sigmanorm.npy' %(starname), sigma_norm)

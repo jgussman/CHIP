@@ -194,7 +194,7 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
                     label_errs = md.infer_labels(ds)
                     infered_valid_labels = ds.test_label_vals
 
-                    #Calculate MSE and store
+                    #Calculate loss and store
                     for y in range(size):
                         if j+y < num_training_parameters:
                             if scaler_instance:
