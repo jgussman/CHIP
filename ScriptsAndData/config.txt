@@ -11,7 +11,8 @@ run_CHIP_q = True
 #                                  of the columns will the names of the stars in the catalogue you want. The 
 #                                  other column must have the column name as "HIRES" and contain the names of
 #                                  the HIRES identification for the stars. 
-crossMatchStarsFilePath = ../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt
+# ../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt
+crossMatchStarsFilePath = ../SPOCSdata/testStars2.txt
 
 # Alpha Normalization ---> Would you like to use the alpha normalization techinque to normalize your spectra?
 alpha_question = True

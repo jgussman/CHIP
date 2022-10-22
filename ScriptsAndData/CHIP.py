@@ -73,6 +73,7 @@ class CHIP:
         self.CrossCorrelate()
         self.Interpolate()
 
+    @staticmethod
     def calculate_SNR(spectrum):
         spectrum = spectrum[7:10].flatten() # Using echelle orders in the middle 
         SNR = np.mean(np.sqrt(spectrum))
@@ -82,77 +83,80 @@ class CHIP:
 
         #print(f"Deleting {filename}.fits")
         file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
-        os.remove(file_path)
+        try:
+            os.remove(file_path)
+        except FileNotFoundError as e:
+            # file was already deleted 
+            pass 
 
+    def DownloadSpectrum(self,filename,SNR = True):
+        '''Download Individual Spectrum and ivar 
+
+        Input: filename (str): name of spectrum you want to download
+            SNR (bool): if you want to calculate the SNR of the spectrum 
+
+        Output: None
+        '''
+        #print(f"Downloading {filename}")
+        self.dataSpectra.spectrum(filename.replace("r",""))  #Download spectra  
+        file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
+        temp_deblazedFlux = fits.getdata(file_path)
+        
+        if SNR: # Used to find best SNR 
+            # Delete Spectrum to save space
+            SNR = self.calculate_SNR(temp_deblazedFlux)
+            del temp_deblazedFlux 
+            self.DeleteSpectrum(filename)
+            return SNR
+
+        else:
+            return temp_deblazedFlux
 
     def find_rv_obs_with_highest_snr(self):
+        removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], "SNR < 100":[],"NAN value in spectra":[]}
         hiresName_fileName_snr_dic = {"HIRESName": [],"FILENAME":[],"SNR":[]}  
-        removed_stars = {"no RV observations":0,"rvcurve wasn't created":0, "SNR < 100":0,"NAN value in spectra":0}
-        rvDownloadLocation = self.dataRV.localdir
 
-        for name in self.star_ID_array:
-            #Make sure the data is in workspace
+        counter = 0
+        for star_ID in self.star_ID_array:
+            print(f"Stars completed: {counter}",end='\r')
             
-            try:
-                rtn = self.dataRV.rvcurve(name)
-                local_path = os.path.join(rvDownloadLocation, "vst" + name + ".csv")
-                temp_df = pd.read_csv(local_path)
+            search_string = f"select OBTYPE,FILENAME from FILES where TARGET like '{star_ID}' and OBTYPE like 'RV observation';"
+
+            url = self.state.search(sql=search_string)
+            obs_df = pd.read_html(url, header=0)[0]
+
+            if obs_df.empty: # There are no RV Observations
+                removed_stars["no RV observations"].append(star_ID) 
+                continue 
+            
+            else:   
+
+                best_SNR = 0
+                best_SNR_filename = False 
+                for filename in obs_df["FILENAME"]:
+                    temp_SNR = self.DownloadSpectrum(filename)
+                    
+                    # Check if the SNR is the highest out of 
+                    # all the star's spectras 
+                    if best_SNR < temp_SNR:
+                        best_SNR = temp_SNR
+
+                        best_SNR_filename = filename 
+
+
+                # Save the Best Spectrum
+                self.spectraDic[best_SNR_filename] = self.DownloadSpectrum(best_SNR_filename, 
+                                                                          SNR=False)
                 
-                # THIS REMOVE IS UNTESTED
-                os.remove(local_path)
+                hiresName_fileName_snr_dic["HIRESName"].append(star_ID)
+                hiresName_fileName_snr_dic["FILENAME"].append(best_SNR_filename)
+                hiresName_fileName_snr_dic["SNR"].append(best_SNR)
                 
-                if not temp_df.empty:
-                    filenames = temp_df['FILENAME'].to_numpy()
-                    
-                    # Get the spectrum with the largest SNR 
-                    best_SNR = (np.nan,0,np.nan)
-                    for filename in filenames:
-                        temp_spec = self.DownloadSpectrum(filename)
-                        temp_SNR = self.calculate_SNR(temp_spec)
-                        
-                        if type(best_SNR[0]) != str:
-                            best_SNR = (filename, temp_SNR,temp_spec)
-                        elif temp_SNR > best_SNR[1]:
-                            best_SNR = (filename, temp_SNR,temp_spec)
-                            self.DeleteSpectrum(best_SNR[0])
-                        else:
-                            del temp_spec
-                            self.DeleteSpectrum(filename)
-                    
-                    
-                    best_spectrum = best_SNR[2].flatten()
-                    if best_SNR[1] < 100:
-                        removed_stars["SNR < 100"] += 1 
-                        filename_to_delete = best_SNR[0]
-                        del best_SNR
-                        self.DeleteSpectrum(filename_to_delete)
-                    elif np.isnan(best_spectrum.flatten()).any():
-                        removed_stars["NAN value in spectra"] += 1
-                        filename_to_delete = best_SNR[0]
-                        del best_SNR
-                        self.DeleteSpectrum(filename_to_delete)
-                    else:
-                        hiresName_fileName_snr_dic["HIRESName"].append(name)
-                        hiresName_fileName_snr_dic["FILENAME"].append(best_SNR[0])
-                        hiresName_fileName_snr_dic["SNR"].append(best_SNR[1])
-                        del best_SNR
-                        self.spectraDic[filename] = best_spectrum
-
-                        
-                        self.SigmaCalculation(best_SNR[0]) #To get the sigma for Inverse variance 
-                        
-                else:
-                    removed_stars["no RV observations"] +=1 
-
-            except OSError: #This error occurs because for some reason the star's rvcurve wasn't created
-                    #This is for removing these stars that have no RV metadata 
-                    removed_stars["rvcurve wasn't created"] += 1
-                    
-
-
-
-        df = pd.DataFrame(hiresName_fileName_snr_dic) 
-        filename_snr_df = df.dropna() #If you don't drop the na's then other methods will break
+                # Calculate ivar
+                self.SigmaCalculation(best_SNR_filename)
+            counter += 1 
+            
+        filename_snr_df = pd.DataFrame(hiresName_fileName_snr_dic) 
         filename_snr_df.to_csv("HIRES_Filename_snr.csv",index_label=False,index=False)
         print(removed_stars)
         print("Downloading Spectra Has Finished")
@@ -206,21 +210,6 @@ class CHIP:
         print("Downloading RV Data Has Finished")
         
 
-    def DownloadSpectrum(self,filename):
-
-        '''Download Individual Spectrum and ivar 
-
-        Input: filename (str): name of spectrum you want to download 
-
-        Output: None
-        '''
-        #print(f"Downloading {filename}")
-        self.dataSpectra.spectrum(filename.replace("r",""))  #Download spectra  
-        file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
-        temp_deblazedFlux = fits.getdata(file_path)
-
-        return temp_deblazedFlux
-
 
 
 
@@ -249,7 +238,7 @@ class CHIP:
                 self.spectraDic[filename] = temp_deblazedFlux
                 self.SigmaCalculation(filename) #To get the sigma for Inverse variance 
             else:
-                print(f"****{filename} HAS BEEN REMOVED BECAUSE IT CONTAINS NAN VALUES")   
+                print(f"{filename:*^20} HAS BEEN REMOVED BECAUSE IT CONTAINS NAN VALUES")   
         print("Downloading Spectra Has Finished")
     
 
@@ -462,37 +451,40 @@ class CHIP:
         Description: Rolling Continuum Normalization. Takes forever and it mega worth it. 
         '''
         print("Alpha Normalization has Begun")
+
         wl_sixteen_echelle = np.ones((16,4021))
         for row in range(16):
             begin,end = 4021*row, 4021*(row+1)
             wl_sixteen_echelle[row] = self.wl_solution[begin:end] 
+
+        counter = 0
         for star_name in self.spectraDic:
-            try: #This is so the program doesn't have to redo the same stars over and over again
-                normed_spectra = np.load(f"Normalized_Spectra/{star_name}_specnorm.npy").flatten()
-                self.spectraDic[star_name] = normed_spectra
+            print(f"Star Normalized Count: {counter}",end="\r")
+            try:
+                if os.path.exists(f"Normalized_Spectra/{star_name}_specnorm.npy") and os.path.exists(f"Normalized_Spectra/{star_name}_sigmanorm.npy"):
+                    continue
+                else:
+                    raise FileExistsError
+            except FileExistsError:
+                contfit_alpha_hull(star_name,
+                                    self.spectraDic[star_name],
+                                    self.Ivar[star_name],
+                                    wl_sixteen_echelle,"./Normalized_Spectra/") 
+
+            counter += 1 
+            
+
+        for star_name in self.spectraDic:
+            try:
+                self.spectraDic[star_name] = np.load(f"Normalized_Spectra/{star_name}_specnorm.npy").flatten()
                 self.Ivar[star_name] = np.load(f"Normalized_Spectra/{star_name}_sigmanorm.npy").flatten()
             except:
-                temp_sixteen_order_echelle = np.ones((16,4021))
-                temp_sixteen_order_echelle_sigma = np.ones((16,4021))
-                temp_spectra = self.spectraDic[star_name]
-                temp_sigma = self.Ivar[star_name]
-                for row in range(16):
-                    begin,end = 4021*row, 4021*(row+1)
-                    temp_sixteen_order_echelle[row] = temp_spectra[begin:end]
-                    temp_sixteen_order_echelle_sigma[row] = temp_sigma[begin:end]
-                contfit_alpha_hull(star_name,
-                                   temp_sixteen_order_echelle,
-                                   temp_sixteen_order_echelle_sigma,
-                                   wl_sixteen_echelle,"./Normalized_Spectra/")
-                try:
-                    self.spectraDic[star_name] = np.load(f"Normalized_Spectra/{star_name}_specnorm.npy").flatten()
-                    self.Ivar[star_name] = np.load(f"Normalized_Spectra/{star_name}_sigmanorm.npy").flatten()
-                except:
-                    print(f'''Something is wrong with {star_name}'s normalization.
-                             We have removed it...''')
-                    del self.spectraDic[star_name]
-                    del self.Ivar[star_name]
-        print("Alpha Normalization has Begun")
+                print(f'''Something is wrong with {star_name}'s normalization.
+                            We have removed it...''')
+                del self.spectraDic[star_name]
+                del self.Ivar[star_name]
+                    
+        print("Alpha Normalization has Ended")
          
 
     def NoDownload(self):
@@ -520,7 +512,8 @@ class CHIP:
         print("Completed Retrieving past data")        
              
 if __name__ == '__main__':
-    # start_time = time.time()
+    import time 
+    start_time = time.time()
     config_values_array = np.loadtxt("config.txt", dtype=str, delimiter='=', usecols=(1))
     crossMatchedNames = pd.read_csv(config_values_array[0],sep=" ")
     hiresNames = crossMatchedNames["HIRES"].to_numpy()
@@ -528,7 +521,7 @@ if __name__ == '__main__':
     
     past_q = (config_values_array[2].replace(" ","") == "True")
     alpha_q = (config_values_array[1].replace(" ","") == "True")
-    #chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q)
-    chipObject.find_and_download_all_rv_obs()
-    # time_elap = time.time() - start_time 
-    # print(f"CHIP took {time_elap/60} minutes!")
+    chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q)
+    
+    time_elap = time.time() - start_time 
+    print(f"CHIP took {time_elap/60} minutes!")
