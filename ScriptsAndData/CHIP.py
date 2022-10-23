@@ -100,7 +100,10 @@ class CHIP:
         #print(f"Downloading {filename}")
         self.dataSpectra.spectrum(filename.replace("r",""))  #Download spectra  
         file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
-        temp_deblazedFlux = fits.getdata(file_path)
+        try: 
+            temp_deblazedFlux = fits.getdata(file_path)
+        except OSError: 
+            return -1
         
         if SNR: # Used to find best SNR 
             # Delete Spectrum to save space
