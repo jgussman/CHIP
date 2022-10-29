@@ -212,88 +212,6 @@ class CHIP:
         self.filename_rv_df.to_csv("HIRES_Filename_rv.csv",index_label=False,index=False)
         print("Downloading RV Data Has Finished")
         
-
-
-
-
-
-    def DownloadSpectra(self):
-        '''
-        Description: This method downloads all the deblazed spectra from HIRES that are in
-                     self.filename_rv_df["FILENAME"] to self.dataSpectra.localdir
-        '''
-        print("Downloading Spectra Has Began")
-        self.spectraDic = {} 
-        download_Location = self.dataSpectra.localdir #This is the second parameter of hiresprv.download.Download
-
-
-        for filename in self.filename_rv_df["FILENAME"]:
-            #I tried to use the , seperation and new line seperation 
-            #for the different file names but it doesn't seem to work.
-            #Thus, a for-loop was used!
-            self.dataSpectra.spectrum(filename.replace("r",""))  #Download spectra 
-            file_path = "{0}/{1}.fits".format(download_Location,filename)
-            temp_deblazedFlux = fits.getdata(file_path)
-            temp_deblazedFlux = temp_deblazedFlux.flatten()
-            
-            #spectraDic is the deblazed spectra 
-            if not np.isnan(temp_deblazedFlux).any(): #Happens in the ivar
-                self.spectraDic[filename] = temp_deblazedFlux
-                self.SigmaCalculation(filename) #To get the sigma for Inverse variance 
-            else:
-                print(f"{filename:*^20} HAS BEEN REMOVED BECAUSE IT CONTAINS NAN VALUES")   
-        print("Downloading Spectra Has Finished")
-    
-
-        
-
-    def ContinuumNormalize(self):
-        '''        
-        Description: This method uses specutils' Spectrum1D function to fit a function
-                     to each echelle order spectra then subtracts the function from the 
-                     echelle order. 
-                     The normalized spectra are put in the {} called self.spectraDic with
-                     the keys being the HIRES filename and the values being a continuum 
-                     normalized 1-D array.   
-        '''
-        #This is the same for all HIRES data 
-        print("Continuum Normalization Began")
-    
-        spectral_axis_wl_solution = self.wl_solution.copy()*u.um
-        length = len(spectral_axis_wl_solution)
-        download_Location = self.dataSpectra.localdir 
-        #Continumm Normalize
-        for filename in self.spectraDic:
-            deblazedFlux = self.spectraDic[filename]*u.Jy
-            ivarSigma = self.Ivar[filename]*u.Jy
-            normalized_array = np.array([])
-            ivar_array = np.array([])
-            
-            for j in range(0,16): #Normalize each individual echelle order 
-                i  = 4021 * j #Each HIRES echelle order has 4021 elements 
-                temp_echelle_wl,temp_echelle_flux = spectral_axis_wl_solution[i:i+4021],deblazedFlux[i:i+4021]
-                temp_sigma  =  ivarSigma[i:i+4021]
-                
-                #Use specutils' Spectrum1D to fit continuum normalize the echelle order
-                #referencing https://specutils.readthedocs.io/en/stable/spectrum1d.html
-                spectrum = Spectrum1D(flux=temp_echelle_flux, spectral_axis=temp_echelle_wl)
-                g1_fit = fit_generic_continuum(spectrum)
-                flux_fit = g1_fit(temp_echelle_wl)
-                
-                #Subracting the continuum from the echelle order & 
-                #the section of sigma corresponding to the current echelle order
-                normalized_echelle = temp_echelle_flux / flux_fit
-                normalized_ivar = temp_sigma / flux_fit
-                #Converting to a float like this removes 2 decimal places from normalized_echelle
-                normalized_echelle = np.array(list(map(np.float,normalized_echelle))) 
-                normalized_ivar = np.array(list(map(np.float,normalized_ivar))) 
-                #Make all the echelle spectra into a 1-D array again
-                normalized_array = np.append(normalized_array,normalized_echelle)
-                ivar_array = np.append(ivar_array,normalized_ivar)
-            spec_norm_scaled = normalized_array/np.repeat(np.percentile(normalized_array, 95, axis=0)[np.newaxis], length, axis=0)
-            self.spectraDic[filename] = spec_norm_scaled #1D normalized spectra (all 16 echelle orders)
-            self.Ivar[filename] = ivar_array #Technically this isn't the inverse variacne yet
-        print("Continuum Normalization Finished")
             
     def CrossCorrelate(self,numOfEdgesToSkip = 100):
         '''
@@ -518,13 +436,14 @@ if __name__ == '__main__':
     import time 
     start_time = time.time()
     config_values_array = np.loadtxt("config.txt", dtype=str, delimiter='=', usecols=(1))
-    crossMatchedNames = pd.read_csv(config_values_array[0],sep=" ")
+    crossMatchedNames = pd.read_csv(config_values_array[1].replace(" ",""),sep=" ")
     hiresNames = crossMatchedNames["HIRES"].to_numpy()
     chipObject = CHIP(hiresNames)
     
-    past_q = (config_values_array[2].replace(" ","") == "True")
-    alpha_q = (config_values_array[1].replace(" ","") == "True")
-    chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q)
+    past_q = (config_values_array[3].replace(" ","") == "True")
+    alpha_q = (config_values_array[2].replace(" ","") == "True")
+    chipObject.find_rv_obs_with_highest_snr()
+    #chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q)
     
     time_elap = time.time() - start_time 
     print(f"CHIP took {time_elap/60} minutes!")

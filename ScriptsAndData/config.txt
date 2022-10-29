@@ -11,14 +11,14 @@ run_CHIP_q = True
 #                                  of the columns will the names of the stars in the catalogue you want. The 
 #                                  other column must have the column name as "HIRES" and contain the names of
 #                                  the HIRES identification for the stars. 
-# ../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt
-crossMatchStarsFilePath = ../SPOCSdata/testStars2.txt
+# ../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt, ../SPOCSdata/testStars2.txt
+crossMatchStarsFilePath = ../SPOCSdata/testStars.txt
 
 # Alpha Normalization ---> Would you like to use the alpha normalization techinque to normalize your spectra?
 alpha_question = True
 
 # Use Past Data ---> Would you like to use the data CHIP produced in your last run of CHIP.py? 
-past_data_question = False 
+past_data_question = True 
 
 
 
