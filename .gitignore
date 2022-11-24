@@ -1,2 +1,5 @@
 # ignore all fits files 
 *.fits
+*.cpython*
+ScriptsAndData/prv.cookies
+

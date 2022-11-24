@@ -160,7 +160,7 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
 
     for mask_info in masks_list:
         mask_name, mask_file_path = mask_info
-        u_flux_train,u_flux_valid,u_ivar_train,u_ivar_valid = ApplyMask(mask_file_path,flux_train,flux_test,ivar_train,ivar_test) 
+        u_flux_train,u_flux_valid,u_ivar_train,u_ivar_valid = ApplyMask(mask_file_path,flux_train,flux_valid,ivar_train,ivar_valid) 
 
         for scaler_info in abundance_scaler_list:
             scaler_name,scaler_instance = scaler_info 
@@ -304,8 +304,11 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
 
     # Use Pickle to save ML model
     # save the model to disk
-    filename = f"Best_Model_Results/{testing_percentage}_{best_model['Mask']}_{best_mask_name}_{best_scaler_name}_{size}_{best_model['Loss-Metric']}.pkl"
-    pickle.dump(model, filename)
+    try:
+        filename = f"Best_Model_Results/{testing_percentage}_{best_model['Mask']}_{best_mask_name}_{best_scaler_name}_{size}_{best_model['Loss-Metric']}.pkl"
+        pickle.dump(model, filename)
+    except:
+        print("Pickling Failded")
 
 
         

@@ -5,20 +5,20 @@
 #
 
 # Do you want to run CHIP?
-run_CHIP_q = True
+run_CHIP_q = False
 
 # Cross Match Names file path ---> this txt file must have two columns seperated by a space with headers, one 
 #                                  of the columns will the names of the stars in the catalogue you want. The 
 #                                  other column must have the column name as "HIRES" and contain the names of
 #                                  the HIRES identification for the stars. 
-# ../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt, ../SPOCSdata/testStars2.txt
-crossMatchStarsFilePath = ../SPOCSdata/testStars.txt
+# ../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt, ../SPOCSdata/testStars.txt
+crossMatchStarsFilePath = ../SPOCSdata/testStars2.txt
 
 # Alpha Normalization ---> Would you like to use the alpha normalization techinque to normalize your spectra?
 alpha_question = True
 
 # Use Past Data ---> Would you like to use the data CHIP produced in your last run of CHIP.py? 
-past_data_question = True 
+past_data_question = False 
 
 
 
@@ -34,7 +34,7 @@ past_data_question = True
 # X = doesn't matter the number 
 
 # Do you want to train The Cannon Models? 
-cannon_q = False
+cannon_q = True
 
 # Wavelengths for all stars: shape = (N,)
 wavelength_file_path = interpolated_wl.csv
@@ -69,10 +69,10 @@ random_seed = 3
 group_sizes_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] 
 
 # The % of the stars that will be used as the test set (int)
-testing_percentage = 80
+testing_percentage = 50
 
 # The % of the training stars that will be used as the validation set (int)
-validation_percentage = 15
+validation_percentage = 50
 
 # Name and function for computing loss for model
 loss_metric_name = MSE

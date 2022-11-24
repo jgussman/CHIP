@@ -1,3 +1,4 @@
+from distutils.dir_util import copy_tree
 from alpha_shapes import * 
 from astropy import units as u
 from astropy.io import fits
@@ -37,11 +38,15 @@ class CHIP:
         self.idldriver = Idldriver('prv.cookies')                          # For creating RV scripts 
         self.state = Database('prv.cookies')                               # For retrieving data from HIRES 
         self.dataRV = Download('prv.cookies', rvOutputPath)                # For downloading RV
+        if not os.path.exists(rvOutputPath):
+            os.mkdir(rvOutputPath)
         self.dataSpectra = Download('prv.cookies',spectraOutputPath)       # For downloading Spectra 
+        if not os.path.exists(spectraOutputPath):
+            os.mkdir(spectraOutputPath)
         self.star_ID_array = star_ID_array                                 # HIRES ID 
-        self.wl_solution = np.genfromtxt(wl_solution_path,skip_header=2)   # UNITS: Angstrom
+        self.wl_solution = np.genfromtxt(wl_solution_path,skip_header=2)   # UNITS: Angstrom 
         self.Ivar = {}                                                     # For storing sigma valeus 
-        self.filename_rv_df = pd.DataFrame()                               # For storing meta Data
+        self.filename_df = pd.DataFrame()                                  # For storing meta Data
         self.spectraDic = {}                                               # For storing spectra filenames
         
         
@@ -61,7 +66,8 @@ class CHIP:
         alpha_normalize: Set to True if you have a ton of time or a really fast computer.
                         700 stars will take ~48 hours. Plus shipping and handling.
         '''
-        if not use_past_data:
+        self.use_past_data = use_past_data
+        if not self.use_past_data:
             self.find_rv_obs_with_highest_snr()
             # self.DownloadSpectra()
         else:
@@ -115,52 +121,99 @@ class CHIP:
         else:
             return temp_deblazedFlux
 
+    def use_path_spectrum(self):
+        print("use_path_spectrum")
+        self.star_snr_dic = dict()
+        try:
+            with open("stars_RV_found.txt",'r') as f: 
+                star_meta_list = f.readlines()
+
+                for star_meta_data in star_meta_list:
+
+                    star_meta_data = star_meta_data.replace("\n","")
+
+                    star_ID, star_filename, star_SNR = star_meta_data.split(" ")
+
+                    self.star_snr_dic[star_ID] = (star_filename, star_SNR)
+                    print(star_ID, star_filename, star_SNR)
+        except:
+            print("No file found called stars_RV_found.txt")
+
     def find_rv_obs_with_highest_snr(self):
-        removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], "SNR < 100":[],"NAN value in spectra":[]}
+        removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], "SNR < 100":[],"NAN value in spectra":[],"No Clue":[]}
         hiresName_fileName_snr_dic = {"HIRESName": [],"FILENAME":[],"SNR":[]}  
+
+        if self.use_past_data:
+            self.use_path_spectrum()
+
 
         counter = 0
         for star_ID in self.star_ID_array:
             print(f"Stars completed: {counter}",end='\r')
-            
-            search_string = f"select OBTYPE,FILENAME from FILES where TARGET like '{star_ID}' and OBTYPE like 'RV observation';"
 
-            url = self.state.search(sql=search_string)
-            obs_df = pd.read_html(url, header=0)[0]
-
-            if obs_df.empty: # There are no RV Observations
-                removed_stars["no RV observations"].append(star_ID) 
-                continue 
-            
-            else:   
-
-                best_SNR = 0
-                best_SNR_filename = False 
-                for filename in obs_df["FILENAME"]:
-                    temp_SNR = self.DownloadSpectrum(filename)
-                    
-                    # Check if the SNR is the highest out of 
-                    # all the star's spectras 
-                    if best_SNR < temp_SNR:
-                        best_SNR = temp_SNR
-
-                        best_SNR_filename = filename 
-
-
-                # Save the Best Spectrum
-                self.spectraDic[best_SNR_filename] = self.DownloadSpectrum(best_SNR_filename, 
-                                                                          SNR=False)
-                
+            try:
+                best_SNR_filename, best_SNR = self.star_snr_dic[star_ID]
                 hiresName_fileName_snr_dic["HIRESName"].append(star_ID)
                 hiresName_fileName_snr_dic["FILENAME"].append(best_SNR_filename)
                 hiresName_fileName_snr_dic["SNR"].append(best_SNR)
+
+                file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
+                temp_deblazedFlux = fits.getdata(file_path)
+                self.spectraDic[best_SNR_filename] = temp_deblazedFlux
+                continue
+
+            except:
+                pass 
                 
-                # Calculate ivar
-                self.SigmaCalculation(best_SNR_filename)
-            counter += 1 
-            
-        filename_snr_df = pd.DataFrame(hiresName_fileName_snr_dic) 
-        filename_snr_df.to_csv("HIRES_Filename_snr.csv",index_label=False,index=False)
+
+            try:
+                search_string = f"select OBTYPE,FILENAME from FILES where TARGET like '{star_ID}' and OBTYPE like 'RV observation';"
+
+                url = self.state.search(sql=search_string)
+                obs_df = pd.read_html(url, header=0)[0]
+
+                if obs_df.empty: # There are no RV Observations
+                    removed_stars["no RV observations"].append(star_ID) 
+                    continue 
+                
+                else:   
+
+                    best_SNR = 0
+                    best_SNR_filename = False 
+                    for filename in obs_df["FILENAME"]:
+                        temp_SNR = self.DownloadSpectrum(filename)
+                        
+                        # Check if the SNR is the highest out of 
+                        # all the star's spectras 
+                        if best_SNR < temp_SNR:
+                            best_SNR = temp_SNR
+
+                            best_SNR_filename = filename 
+
+                    if best_SNR < 100:
+                        removed_stars["SNR < 100"].append(star_ID)
+
+                    else:
+                        # Save the Best Spectrum
+                        self.spectraDic[best_SNR_filename] = self.DownloadSpectrum(best_SNR_filename, 
+                                                                                SNR=False)
+                        
+
+                        hiresName_fileName_snr_dic["HIRESName"].append(star_ID)
+                        hiresName_fileName_snr_dic["FILENAME"].append(best_SNR_filename)
+                        hiresName_fileName_snr_dic["SNR"].append(best_SNR)
+                    
+                    # Calculate ivar
+                    self.SigmaCalculation(best_SNR_filename)
+            except:
+                removed_stars["No Clue"].append(star_ID)
+            finally:
+                counter += 1 
+                continue
+        print(f"Stars completed: {counter}")
+        self.filename_df = pd.DataFrame(hiresName_fileName_snr_dic) 
+        self.filename_df.to_csv("HIRES_Filename_snr.csv",index_label=False,index=False)
+        
         print(removed_stars)
         print("Downloading Spectra Has Finished")
 
@@ -208,10 +261,10 @@ class CHIP:
                     hiresName_fileName_rv_dic["RV"] += [pd.NA]
                     hiresName_fileName_rv_dic["FILENAME"] += [pd.NA]
         df = pd.DataFrame(hiresName_fileName_rv_dic) 
-        self.filename_rv_df = df.dropna() #If you don't drop the na's then other methods will break
-        self.filename_rv_df.to_csv("HIRES_Filename_rv.csv",index_label=False,index=False)
+        self.filename_df = df.dropna() #If you don't drop the na's then other methods will break
+        self.filename_df.to_csv("HIRES_Filename_rv.csv",index_label=False,index=False)
         print("Downloading RV Data Has Finished")
-        
+
             
     def CrossCorrelate(self,numOfEdgesToSkip = 100):
         '''
@@ -239,9 +292,9 @@ class CHIP:
         
         RV = 80 #60 gave good results 
         crossCorrelatedspectra = {} #Key: FILENAME Values: (correlated wavelength, normalized flux)
-        for i in range(self.filename_rv_df.shape[0]):
+        for i in range(self.filename_df.shape[0]):
             try:
-                row = self.filename_rv_df.iloc[i]
+                row = self.filename_df.iloc[i]
                 filename = row[1]
                 normalizedFlux = self.spectraDic[filename]
 
@@ -280,6 +333,10 @@ class CHIP:
         minMaxVal = float('inf')
         #Finds the max minimum wavelength val & finds the min maximum wavelenght val 
         for spectra_flux_tuple in self.spectraDic.values(): 
+            
+            #TODO: Add remove print statement
+            print("Should be two arrays: wavelengths, flux",spectra_flux_tuple)
+            
             #Assumption: wavelength is sorted from the 0th index being min,
             #            the len(wavelength array)-1 is the max wavelength val,
             #            all the wavelength arrays are the same length.
@@ -312,7 +369,7 @@ class CHIP:
         replacementSpectraDic = {}
         replacementIvarDic = {}
         
-        for HIRESname,filename,rv in self.filename_rv_df.to_numpy():
+        for HIRESname,filename,rv in self.filename_df.to_numpy():
             try:
                 wl = self.spectraDic[filename][0]
                 flux_norm = self.spectraDic[filename][1]
@@ -413,12 +470,12 @@ class CHIP:
         Description: Need to have spectra already downloaded and HIRES_Filename_rv.csv needs to be made already.
         Only made this method because the internet at my parents house is extremely poor. 1.1 mbs 
         '''
-        hires,file = np.genfromtxt("HIRES_Filename_rv.csv",delimiter=',',usecols=(0,1),skip_header=1,dtype='str',unpack = True)
-        rv = np.genfromtxt("HIRES_Filename_rv.csv",delimiter=',',usecols=(2),skip_header=1)
-        self.filename_rv_df = pd.DataFrame({"HIRESName":hires,'FILENAME':file,"RV":rv})
+        hires,file = np.genfromtxt("HIRES_Filename_snr.csv",delimiter=',',usecols=(0,1),skip_header=1,dtype='str',unpack = True)
+        rv = np.genfromtxt("HIRES_Filename_snr.csv",delimiter=',',usecols=(2),skip_header=1)
+        self.filename_df = pd.DataFrame({"HIRESName":hires,'FILENAME':file,"RV":rv})
         download_Location = self.dataSpectra.localdir #This is the second parameter of hiresprv.download.Download
         self.spectraDic = {}
-        for filename in self.filename_rv_df["FILENAME"]:
+        for filename in self.filename_df["FILENAME"]:
             #I tried to use the , seperation and new line seperation 
             #for the different file names but it doesn't seem to work.
             #Thus, a for-loop was used!
@@ -433,8 +490,8 @@ class CHIP:
         print("Completed Retrieving past data")        
              
 if __name__ == '__main__':
-    import time 
-    start_time = time.time()
+     
+    
     config_values_array = np.loadtxt("config.txt", dtype=str, delimiter='=', usecols=(1))
     crossMatchedNames = pd.read_csv(config_values_array[1].replace(" ",""),sep=" ")
     hiresNames = crossMatchedNames["HIRES"].to_numpy()
@@ -442,8 +499,10 @@ if __name__ == '__main__':
     
     past_q = (config_values_array[3].replace(" ","") == "True")
     alpha_q = (config_values_array[2].replace(" ","") == "True")
-    chipObject.find_rv_obs_with_highest_snr()
-    #chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q)
-    
-    time_elap = time.time() - start_time 
-    print(f"CHIP took {time_elap/60} minutes!")
+
+    import timeit
+
+    exec_time = timeit.timeit(chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q))
+
+
+    print(f"CHIP took {exec_time/60 :.2f} minutes!")

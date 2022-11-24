@@ -12,8 +12,8 @@ if chip_q:
     crossMatchedNames = pd.read_csv(config_values_array[1].replace(" ",""),sep=" ")
     hiresNames = crossMatchedNames["HIRES"].to_numpy()
     chipObject = CHIP(hiresNames)
-    past_q = (config_values_array[3].replace(" ","").lower()[0] == "t")
     alpha_q = (config_values_array[2].replace(" ","").lower()[0] == "t")
+    past_q = (config_values_array[3].replace(" ","").lower()[0] == "t")
     chipObject.Run(use_past_data=past_q,alpha_normalize = alpha_q)
     print('''               ****************
             Check the Spectra in fluxes_for_HIRES.npy to ensure they are correct!
