@@ -8,6 +8,7 @@ from scipy import stats
 from TheCannon import model
 from TheCannon import dataset
 import TheCannon
+import os 
 import pickle 
 
 def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_path,masks_list,abundances_file_path,parameters,random_seed,group_sizes_list,testing_percentage, validation_percentage, loss_metric_name, loss_metric_fun):
@@ -254,6 +255,9 @@ def TheCannonCHIP(wavelength_file_path,fluxes_file_path,ivar_file_path,id_file_p
     ## Best Training Groups 
     size = best_model["Group Size"]
     training_groups = TrainingBuddys(parameters,size)
+
+    if not os.path.exists("Best_Model_Results"):
+            os.mkdir("Best_Model_Results")
 
     def SaveTrueAndPredicted(true_label,predicted_label,label_name):
         '''

@@ -435,6 +435,10 @@ class CHIP:
             begin,end = 4021*row, 4021*(row+1)
             wl_sixteen_echelle[row] = self.wl_solution[begin:end] 
 
+        # Create or keep Normalized_Spectra dir
+        if not os.path.exists("Normalized_Spectra"):
+            os.mkdir("Normalized_Spectra")
+
         counter = 0
         for star_name in self.spectraDic:
             print(f"Star Normalized Count: {counter}",end="\r")
