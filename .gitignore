@@ -2,3 +2,4 @@
 prv.cookies
 *.log
 DELETE*
+data/chip_runs/
