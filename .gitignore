@@ -1,2 +1,4 @@
 # ignore all fits files 
-temp/
+prv.cookies
+*.log
+DELETE*

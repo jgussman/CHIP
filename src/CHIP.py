@@ -1,4 +1,3 @@
-from distutils.dir_util import copy_tree
 from alpha_shapes import * 
 from astropy import units as u
 from astropy.io import fits
@@ -7,8 +6,6 @@ from hiresprv.idldriver import Idldriver
 from hiresprv.database import Database
 from hiresprv.download import Download
 from PyAstronomy import pyasl
-from specutils.fitting import fit_generic_continuum
-from specutils.spectra import Spectrum1D
 from scipy import interpolate 
 
 import numpy as np
