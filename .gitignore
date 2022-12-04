@@ -3,3 +3,4 @@ prv.cookies
 *.log
 DELETE*
 data/chip_runs/
+__pycache__
