@@ -1,5 +1,6 @@
 import json
 import os
+import numpy as np
 import pandas as pd
 import sys
 sys.path.append('.')
@@ -67,14 +68,30 @@ class TestCHIP(unittest.TestCase):
         
         self.assertTrue( ((comparison_df == new_df ).all()).all() )
 
+
+        # spectraDic has correct shape and no nans 
+        for spectrum in self.CHIP.spectraDic.values(): 
+            self.assertEqual( spectrum.shape, (16, 4021) )
+            self.assertFalse( np.isnan(spectrum).any() )
+        
+        # ivarDic has correct shape and no nans 
+        for ivar in self.CHIP.ivarDic.values(): 
+            self.assertEqual( ivar.shape, (16, 4021) )
+            self.assertFalse( np.isnan(ivar).any() )
+
         
 
-                
-            
 
-         
 
-        
+    
+    def clean_up( self ):
+        '''At the end of each testinf get rid of files in self.CHIP.storage_path
+
+        Input: None 
+
+        Output: None 
+        '''
+        os.remove( self.CHIP.storage_path )
 
 
 if __name__ == "__main__":
