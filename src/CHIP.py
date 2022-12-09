@@ -172,7 +172,7 @@ class CHIP:
         hires_names_array = cross_matched_df["HIRES"].to_numpy()
 
         # Record results 
-        removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], "SNR < 100":[],"NAN value in spectra":[],"No Clue":[]}
+        self.removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], "SNR < 100":[],"NAN value in spectra":[],"No Clue":[],"Nan in IVAR":[]}
         hiresID_fileName_snr_dic = {"HIRESid": [],"FILENAME":[],"SNR":[]}  
 
         # Location to save spectra
@@ -195,7 +195,7 @@ class CHIP:
             # Check if there are any RV Observations 
             if obs_df.empty: 
                 logging.debug(f"{star_ID} has no RV observations")
-                removed_stars["no RV observations"].append(star_ID) 
+                self.removed_stars["no RV observations"].append(star_ID) 
                 continue 
             else:   
                 logging.debug(f"RV Observation Filenames: {obs_df['FILENAME'] }")
@@ -226,7 +226,7 @@ class CHIP:
                 if best_SNR < 100: 
                     logging.debug(f"{star_ID}'s best spectrum had an SNR lower than 100. Thus it was removed.")
 
-                    removed_stars["SNR < 100"].append(star_ID)
+                    self.removed_stars["SNR < 100"].append(star_ID)
 
                 else:
                     # Save the Best Spectrum
@@ -239,7 +239,7 @@ class CHIP:
                     hiresID_fileName_snr_dic["SNR"].append(best_SNR)
                 
                     # Calculate ivar
-                    self.sigma_calculation(best_SNR_filename)
+                    self.sigma_calculation(best_SNR_filename , star_ID)
 
 
         # Save SNR meta data in csv file 
@@ -248,7 +248,7 @@ class CHIP:
                                            index_label=False,
                                            index=False)
         
-        pd.DataFrame(removed_stars).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
+        pd.DataFrame(self.removed_stars).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
                                            index_label=False,
                                            index=False) 
 
@@ -257,10 +257,11 @@ class CHIP:
         del self.state
         
 
-    def sigma_calculation(self,filename):
+    def sigma_calculation(self,filename , star_ID):
         '''Calculates sigma for inverse variance (IVAR) 
 
         Inputs: filename (str): HIRES file name of spectrum you want to calculate IVAR for
+                star_ID (str): HIRES identifer 
 
         Outputs: None
         '''
@@ -274,7 +275,8 @@ class CHIP:
         if not np.isnan(sigma).any(): #Happens in the IVAR
                 self.ivarDic[filename] = sigma
         else:
-            logging.error(f"****{filename} HAS BEEN REMOVED BECAUSE IT CONTAINS NAN VALUES IN IVAR") 
+            logging.info(f"{star_ID} has NAN value in IVAR") 
+            self.removed_stars["Nan in IVAR"].append(star_ID)
             del self.spectraDic[filename]
 
 
