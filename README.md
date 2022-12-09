@@ -7,7 +7,7 @@
 
 [ ] Refactor CHIP
 
-    [ ] find_rv_obs_with_highest_snr
+    [X] find_rv_obs_with_highest_snr
 
     [ ] Alpha Normalize (use multiprocessing)
 
@@ -20,6 +20,5 @@
     [ ] Use mini-batch
     
 [ ] Create DockerImage for reproducability
-
 
 [ ] How to use README

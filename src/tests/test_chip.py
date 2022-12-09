@@ -30,7 +30,19 @@ class TestCHIP(unittest.TestCase):
         # Insure the config file is being read in correctly. 
         for test_config_key in test_config:
             self.assertTrue( test_config_key in self.CHIP.config)
-            self.assertTrue( test_config[test_config_key] == self.CHIP.config[test_config_key])
+
+            # type(test_config[test_config_key]) == dic 
+            for config_parameter in test_config[test_config_key]:
+                self.assertTrue( config_parameter in self.CHIP.config[test_config_key])
+
+                if config_parameter == "description":
+                    continue
+                
+                for field in test_config[test_config_key][config_parameter]:
+                    self.assertTrue( field in test_config[test_config_key][config_parameter] )
+
+                    # self.assertEqual( test_config[test_config_key][config_parameter][field], 
+                    #                   self.CHIP.config[test_config_key][config_parameter][field])
              
     def test_download_spectra(self):
         ''' Test CHIP's download_spectra method
@@ -57,7 +69,7 @@ class TestCHIP(unittest.TestCase):
         files_that_should_exist = [ file_name for dir_path, dir_names, file_names in os.walk("src/tests/test_comparison_files") for file_name in file_names]
         files_that_do_exist = [ file_name for dir_path, dir_names, file_names in os.walk( self.CHIP.storage_path ) for file_name in file_names]
         
-        self.assertEquals( len(files_that_should_exist), len(files_that_do_exist) )
+        self.assertEqual( len(files_that_should_exist), len(files_that_do_exist) )
         
         for file_should_exist in files_that_do_exist:
             self.assertTrue( file_should_exist in files_that_do_exist )
@@ -68,15 +80,20 @@ class TestCHIP(unittest.TestCase):
         
         self.assertTrue( ((comparison_df == new_df ).all()).all() )
 
+        # Adjust for trimming side
+        with open("src/config.json", "r") as f:
+            test_config = json.load(f)
+        # Times two because the trim is applied to both sides of the echelle order 
+        trim = 2 * test_config["CHIP"]["trim_spectrum"]["val"]
 
         # spectraDic has correct shape and no nans 
         for spectrum in self.CHIP.spectraDic.values(): 
-            self.assertEqual( spectrum.shape, (16, 4021) )
+            self.assertEqual( spectrum.shape, (16, 4021 - trim) )
             self.assertFalse( np.isnan(spectrum).any() )
         
         # ivarDic has correct shape and no nans 
         for ivar in self.CHIP.ivarDic.values(): 
-            self.assertEqual( ivar.shape, (16, 4021) )
+            self.assertEqual( ivar.shape, (16, 4021  - trim) )
             self.assertFalse( np.isnan(ivar).any() )
 
         

@@ -20,14 +20,24 @@ class CHIP:
         '''
         
         '''
+        # Create a new storage location for this pipeline
+        self.create_storage_location()
 
-        logging.info(f"Instantiated : {self.__class__}")
+        # logging 
+        logging.basicConfig(filename=os.path.join(self.storage_path, 'CHIP.log'),
+                            format='%(asctime)s - %(message)s', 
+                            datefmt="%Y/%m/%d %H:%M:%S",  
+                            level=logging.INFO)
+        # logs to file and stdout
+        logging.getLogger().addHandler(logging.StreamHandler())
+        # set datefmt to GMT
+        logging.Formatter.converter = time.gmtime
+
+        # login into the NExSci servers
+        login('data/prv.cookies')
 
         # Get arguments from config.json
         self.get_arguments()
-
-        # Create a new storage location for this pipeline
-        self.create_storage_location()
 
         # HIRES Filename : spectrum as a (16,4021) np.array  
         self.spectraDic = {}            
@@ -36,7 +46,6 @@ class CHIP:
         self.ivarDic = {}                
 
                                                                                      
-    
     
     def create_storage_location(self):
         ''' Creates a unique subdirectory in the data directory to store the outputs of CHIP
@@ -55,7 +64,6 @@ class CHIP:
         os.makedirs(self.storage_path,exist_ok=True)
         
         
-
     def run(self):
         ''' Run the pipeline from end to end. 
 
@@ -67,6 +75,7 @@ class CHIP:
         # TODO: implement end-to-end run of CHIP
 
         pass 
+
 
     def get_arguments(self):
         ''' Get arguments from src/config.json 
@@ -83,6 +92,7 @@ class CHIP:
         
         logging.info( f"config.json : {self.config}" )
     
+
     @staticmethod
     def calculate_SNR(spectrum):
         ''' Calculates the SNR of spectrum using the 8th and 9th echelle orders
@@ -96,6 +106,7 @@ class CHIP:
         spectrum = spectrum[7:10].flatten() # Using echelle orders in the middle 
         SNR = np.mean(np.sqrt(spectrum))
         return SNR 
+
 
     def delete_spectrum(self,filename):
         '''Remove spectrum from local storage
@@ -133,16 +144,16 @@ class CHIP:
                 # There is a problem with the downloaded fits file 
                 return -1
             
-            
             if SNR: # Used to find best SNR 
                 SNR = self.calculate_SNR(temp_deblazedFlux)
 
                 # delete Spectrum variable so it can be delete if needed
                 del temp_deblazedFlux 
                 return SNR
-
             else:
-                return temp_deblazedFlux
+                # Trim the left and right sides of each echelle order 
+                trim =  self.config["CHIP"]["trim_spectrum"]["val"]
+                return temp_deblazedFlux[:, trim: -trim]
         
         
     def download_spectra(self):
@@ -167,11 +178,11 @@ class CHIP:
         # Location to save spectra
         spectra_download_location = os.path.join( self.storage_path, "rv_obs" )
         os.makedirs( spectra_download_location, exist_ok=True )
+
         # For retrieving data from HIRES
         self.state = Database('data/prv.cookies')
         self.dataSpectra = Download('data/prv.cookies', spectra_download_location)
                                   
-        
         for star_ID in hires_names_array:
             logging.debug(f"Finding highest SNR spectrum for {star_ID}")
                 
@@ -208,9 +219,9 @@ class CHIP:
                         delete_spectrum_filename = filename 
 
                     # Delete unused spectrum
-                    if delete_spectrum_filename: # Will not trigger in the intial case
+                    # Will not trigger in the intial case
+                    if delete_spectrum_filename: 
                         self.delete_spectrum(delete_spectrum_filename)
-
 
                 if best_SNR < 100: 
                     logging.debug(f"{star_ID}'s best spectrum had an SNR lower than 100. Thus it was removed.")
@@ -230,15 +241,14 @@ class CHIP:
                     # Calculate ivar
                     self.sigma_calculation(best_SNR_filename)
 
-            
-        
+
         # Save SNR meta data in csv file 
         self.hires_filename_snr_df = pd.DataFrame(hiresID_fileName_snr_dic) 
         self.hires_filename_snr_df.to_csv( os.path.join(self.storage_path ,"HIRES_Filename_snr.csv"),
                                            index_label=False,
                                            index=False)
         
-        pd.DataFrame(removed_stars).to_csv( os.path.join(self.storage_path ,"remove_stars.csv"),
+        pd.DataFrame(removed_stars).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
                                            index_label=False,
                                            index=False) 
 
@@ -280,25 +290,11 @@ class CHIP:
 
 if __name__ == "__main__":
     
-    # logging 
-    logging.basicConfig(filename='src/CHIP.log',
-                        format='%(asctime)s - %(message)s', 
-                        datefmt="%Y/%m/%d %H:%M:%S",  
-                        level=logging.INFO)
-    # logs to file and stdout
-    logging.getLogger().addHandler(logging.StreamHandler())
-    # set datefmt to GMT
-    logging.Formatter.converter = time.gmtime
-
-    logging.info(f"Running file: {__file__}")
-
-    # login into the NExSci servers
-    login('data/prv.cookies')
-
     # Instantiation
     chip = CHIP()
 
     chip.download_spectra()
+
 
     
 
