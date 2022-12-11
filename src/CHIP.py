@@ -1,3 +1,4 @@
+from alpha_shapes import contfit_alpha_hull
 from astropy.io import fits
 from hiresprv.auth import login
 from hiresprv.database import Database
@@ -54,7 +55,7 @@ class CHIP:
 
         Outputs: None 
         '''
-        logging.debug("create_storage_location()")
+        logging.debug("CHIP.create_storage_location( )")
 
         # Greenwich Mean Time (UTC) right now 
         gmt_datetime = time.strftime("%Y-%m-%d_%H-%M-%S",time.gmtime())
@@ -85,7 +86,7 @@ class CHIP:
         Outputs: (dict) representing src/config.json
         '''
 
-        logging.debug("get_arguments()")
+        logging.debug("CHIP.get_arguments( )")
 
         with open("src/config.json", "r") as f:
             self.config = json.load(f)
@@ -101,7 +102,7 @@ class CHIP:
 
         Outputs: (float) estimated SNR of inputed spectrum
         '''
-        logging.debug(f"calculate_SNR({spectrum})")
+        logging.debug(f"CHIP.calculate_SNR( {spectrum} )")
 
         spectrum = spectrum[7:10].flatten() # Using echelle orders in the middle 
         SNR = np.mean(np.sqrt(spectrum))
@@ -115,7 +116,7 @@ class CHIP:
 
         Outputs: None 
         '''
-        logging.debug(f"delete_spectrum({filename})")
+        logging.debug(f"CHIP.delete_spectrum( {filename} )")
         file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
         try:
             os.remove(file_path)
@@ -132,7 +133,7 @@ class CHIP:
 
             Output: None
             '''
-            logging.debug(f"download_spectrum(filename={filename},SNR={SNR})")
+            logging.debug(f"CHIP.download_spectrum( filename={filename}, SNR={SNR} )")
             
             #Download spectra
             self.dataSpectra.spectrum(filename.replace("r",""))    
@@ -252,11 +253,6 @@ class CHIP:
                                            index_label=False,
                                            index=False) 
 
-        # Trim wl_solution 
-        self.wl_solution = np.load("data/spocs/wl_solution.npy")
-        trim =  self.config["CHIP"]["trim_spectrum"]["val"]
-        self.wl_solution = self.wl_solution[:, trim: -trim]
-
         # Delete unused instance attributes
         del self.dataSpectra
         del self.state
@@ -285,7 +281,50 @@ class CHIP:
             del self.spectraDic[filename]
 
 
-        
+        def AlphaNormalization(self):
+            ''' Rolling Continuum Normalization.  
+            '''
+            logging.debug("CHIP.AlphaNormalization( )")
+            
+            # Trim wl_solution 
+            self.wl_solution = np.load("data/spocs/wl_solution.npy")
+            trim =  self.config["CHIP"]["trim_spectrum"]["val"]
+            self.wl_solution = self.wl_solution[:, trim: -trim]
+             
+
+            # Create or keep Normalized_Spectra dir
+            if not os.path.exists("Normalized_Spectra"):
+                os.mkdir("Normalized_Spectra")
+
+            counter = 0
+            for star_name in self.spectraDic:
+                print(f"Star Normalized Count: {counter}",end="\r")
+                try:
+                    if os.path.exists(f"Normalized_Spectra/{star_name}_specnorm.npy") and os.path.exists(f"Normalized_Spectra/{star_name}_sigmanorm.npy"):
+                        continue
+                    else:
+                        raise FileExistsError
+                except FileExistsError:
+                    contfit_alpha_hull(star_name,
+                                        self.spectraDic[star_name],
+                                        self.Ivar[star_name],
+                                        wl_sixteen_echelle,"./Normalized_Spectra/") 
+
+                counter += 1 
+                
+
+            for star_name in self.spectraDic:
+                try:
+                    self.spectraDic[star_name] = np.load(f"Normalized_Spectra/{star_name}_specnorm.npy").flatten()
+                    self.Ivar[star_name] = np.load(f"Normalized_Spectra/{star_name}_sigmanorm.npy").flatten()
+                except:
+                    print(f'''Something is wrong with {star_name}'s normalization.
+                                We have removed it...''')
+                    del self.spectraDic[star_name]
+                    del self.Ivar[star_name]
+                        
+            print("Alpha Normalization has Ended")
+
         
 
 
