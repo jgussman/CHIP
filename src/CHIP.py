@@ -252,6 +252,11 @@ class CHIP:
                                            index_label=False,
                                            index=False) 
 
+        # Trim wl_solution 
+        self.wl_solution = np.load("data/spocs/wl_solution.npy")
+        trim =  self.config["CHIP"]["trim_spectrum"]["val"]
+        self.wl_solution = self.wl_solution[:, trim: -trim]
+
         # Delete unused instance attributes
         del self.dataSpectra
         del self.state
