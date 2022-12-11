@@ -302,22 +302,16 @@ class CHIP:
         os.mkdir( norm_spectra_dir_path )
 
         start_time = time.time()
-        Parallel( n_jobs = 1 )(delayed( contfit_alpha_hull )(star_name,
-                                    self.spectraDic[star_name],
-                                    self.ivarDic[star_name],
-                                    self.wl_solution,
-                                    norm_spectra_dir_path) for star_name in self.spectraDic)
-
-        # for star_name in self.spectraDic:                
-        #         contfit_alpha_hull(star_name,
-        #                             self.spectraDic[star_name],
-        #                             self.ivarDic[star_name],
-        #                             self.wl_solution,
-        #                             norm_spectra_dir_path) 
+        cores = self.config["CHIP"]["cores"]["val"]
+        Parallel( n_jobs = cores )(delayed( contfit_alpha_hull )(star_name,
+                                            self.spectraDic[star_name],
+                                            self.ivarDic[star_name],
+                                            self.wl_solution,
+                                            norm_spectra_dir_path) for star_name in self.spectraDic)
 
         end_time = time.time()
         logging.info(f"It took alphanorm, {end_time - start_time} to finish!")
-        print(f"It took alphanorm, {end_time - start_time} to finish!")
+
         for star_name in list(self.spectraDic):
             try:
                 specnorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_specnorm.npy")

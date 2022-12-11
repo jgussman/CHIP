@@ -22,6 +22,11 @@
         "trim_spectrum" : {
             "val": 50,
             "description": "Remove this many pixels from the left and right edges of EACH echelle order."
+        },
+
+        "cores" : { 
+            "val": 2,
+            "description": "How many cores on your machine would you like to use? -1 for all."
         }
 
     },
