@@ -5,6 +5,7 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 from localreg import *
 from astropy.io import fits
+import os 
 
 
 # AFS implementation from Xu et al. 2019
@@ -259,7 +260,8 @@ def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=Fal
         plt.xlabel('pixel number')
         plt.ylabel('normalized flux')
         plt.tight_layout()
-        plt.savefig(save_dir+'%s_specnorm.png' %(starname), dpi=300)
+
+        plt.savefig( os.path.join(save_dir, '%s_specnorm.png' %(starname)), dpi=300)
         plt.clf()
         plt.close()
 
@@ -267,7 +269,7 @@ def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=Fal
     # np.save(save_dir+'%s_cfit.npy' %(starname), cfit)
 
     # Save spectrum
-    np.save(save_dir+'%s_specnorm.npy' %(starname), spec_norm)
+    np.save( os.path.join(save_dir, '%s_specnorm.npy' %(starname)), spec_norm)
 
 
     # Preprocessing step: Get rid of all large peaks that will create problems for interpolation
@@ -281,7 +283,7 @@ def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=Fal
         np.save(save_dir+'%s_specnorm_nopeaks.npy' %(starname), spec_norm_nopeaks)
 
     # Save uncertainty
-    np.save(save_dir+'%s_sigmanorm.npy' %(starname), sigma_norm)
+    np.save(save_dir+'%s_sigmanorm.npy' %(starname), spec_norm)
 
     if plot == True:
         plt.plot(np.ndarray.flatten(spec_norm_nopeaks), color='purple')

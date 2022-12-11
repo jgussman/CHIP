@@ -4,6 +4,7 @@ from hiresprv.auth import login
 from hiresprv.database import Database
 from hiresprv.download import Download
 from hiresprv.idldriver import Idldriver
+from joblib import Parallel, delayed 
 
 
 import logging
@@ -23,16 +24,6 @@ class CHIP:
         '''
         # Create a new storage location for this pipeline
         self.create_storage_location()
-
-        # logging 
-        logging.basicConfig(filename=os.path.join(self.storage_path, 'CHIP.log'),
-                            format='%(asctime)s - %(message)s', 
-                            datefmt="%Y/%m/%d %H:%M:%S",  
-                            level=logging.INFO)
-        # logs to file and stdout
-        logging.getLogger().addHandler(logging.StreamHandler())
-        # set datefmt to GMT
-        logging.Formatter.converter = time.gmtime
 
         # login into the NExSci servers
         login('data/prv.cookies')
@@ -173,7 +164,10 @@ class CHIP:
         hires_names_array = cross_matched_df["HIRES"].to_numpy()
 
         # Record results 
-        self.removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], "SNR < 100":[],"NAN value in spectra":[],"No Clue":[],"Nan in IVAR":[]}
+        self.removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], 
+                              "SNR < 100":[],"NAN value in spectra":[],
+                              "No Clue":[],"Nan in IVAR":[],
+                              "Normalization error":[]}
         hiresID_fileName_snr_dic = {"HIRESid": [],"FILENAME":[],"SNR":[]}  
 
         # Location to save spectra
@@ -281,55 +275,54 @@ class CHIP:
             del self.spectraDic[filename]
 
 
-        def AlphaNormalization(self):
-            ''' Rolling Continuum Normalization.  
-            '''
-            logging.debug("CHIP.AlphaNormalization( )")
+    def alphanormalization(self):
+        ''' Rolling Continuum Normalization.  
+
+        Input: None
+
+        Output: None
+        '''
+        logging.info("CHIP.alphanormalization( )")
+        
+        # Trim wl_solution 
+        self.wl_solution = np.load("data/spocs/wl_solution.npy")
+        trim =  self.config["CHIP"]["trim_spectrum"]["val"]
+        self.wl_solution = self.wl_solution[:, trim: -trim]
             
-            # Trim wl_solution 
-            self.wl_solution = np.load("data/spocs/wl_solution.npy")
-            trim =  self.config["CHIP"]["trim_spectrum"]["val"]
-            self.wl_solution = self.wl_solution[:, trim: -trim]
-             
+        # Create Normalized Spectra dir
+        norm_spectra_dir_path = os.path.join( self.storage_path, "norm_spectra" )
+        os.mkdir( norm_spectra_dir_path )
 
-            # Create or keep Normalized_Spectra dir
-            if not os.path.exists("Normalized_Spectra"):
-                os.mkdir("Normalized_Spectra")
+        start_time = time.time()
+        Parallel( n_jobs = 2 )(delayed( contfit_alpha_hull )(star_name,
+                                    self.spectraDic[star_name],
+                                    self.ivarDic[star_name],
+                                    self.wl_solution,
+                                    norm_spectra_dir_path) for star_name in self.spectraDic)
 
-            counter = 0
-            for star_name in self.spectraDic:
-                print(f"Star Normalized Count: {counter}",end="\r")
-                try:
-                    if os.path.exists(f"Normalized_Spectra/{star_name}_specnorm.npy") and os.path.exists(f"Normalized_Spectra/{star_name}_sigmanorm.npy"):
-                        continue
-                    else:
-                        raise FileExistsError
-                except FileExistsError:
-                    contfit_alpha_hull(star_name,
-                                        self.spectraDic[star_name],
-                                        self.Ivar[star_name],
-                                        wl_sixteen_echelle,"./Normalized_Spectra/") 
+        # for star_name in self.spectraDic:                
+        #         contfit_alpha_hull(star_name,
+        #                             self.spectraDic[star_name],
+        #                             self.ivarDic[star_name],
+        #                             self.wl_solution,
+        #                             norm_spectra_dir_path) 
 
-                counter += 1 
-                
-
-            for star_name in self.spectraDic:
-                try:
-                    self.spectraDic[star_name] = np.load(f"Normalized_Spectra/{star_name}_specnorm.npy").flatten()
-                    self.Ivar[star_name] = np.load(f"Normalized_Spectra/{star_name}_sigmanorm.npy").flatten()
-                except:
-                    print(f'''Something is wrong with {star_name}'s normalization.
-                                We have removed it...''')
-                    del self.spectraDic[star_name]
-                    del self.Ivar[star_name]
+        end_time = time.time()
+        logging.info(f"It took alphanorm, {end_time - start_time} to finish!")
+        for star_name in self.spectraDic:
+            try:
+                specnorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_specnorm.npy")
+                sigmanorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_sigmanorm.npy")
+                self.spectraDic[star_name] = np.load(specnorm_path).flatten()
+                self.ivarDic[star_name] = np.load(sigmanorm_path).flatten()
+            except:
+                logging.info(f'''Something went wrong with {star_name}'s normalization. We have removed the star.''')
+                del self.spectraDic[star_name]
+                del self.ivarDic[star_name]
+                self.removed_stars["Normalization error"].append(star_name)
                         
-            print("Alpha Normalization has Ended")
 
         
-
-
-
-
 
 
 
@@ -339,8 +332,19 @@ if __name__ == "__main__":
     # Instantiation
     chip = CHIP()
 
+    # logging 
+    logging.basicConfig(filename=os.path.join(chip.storage_path, 'CHIP.log'),
+                        format='%(asctime)s - %(message)s', 
+                        datefmt="%Y/%m/%d %H:%M:%S",  
+                        level=logging.INFO)
+    # logs to file and stdout
+    logging.getLogger().addHandler(logging.StreamHandler())
+    # set datefmt to GMT
+    logging.Formatter.converter = time.gmtime
+
     chip.download_spectra()
 
+    chip.alphanormalization()
 
     
 
