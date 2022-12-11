@@ -1,3 +1,15 @@
+import logging
+# logging 
+logging.basicConfig(filename= 'CHIP.log',
+                    format='%(asctime)s - %(message)s', 
+                    datefmt="%Y/%m/%d %H:%M:%S",  
+                    level=logging.INFO)
+import json
+import os
+import numpy as np
+import pandas as pd
+import time 
+
 from alpha_shapes import contfit_alpha_hull
 from astropy.io import fits
 from hiresprv.auth import login
@@ -7,12 +19,8 @@ from hiresprv.idldriver import Idldriver
 from joblib import Parallel, delayed 
 
 
-import logging
-import json
-import os
-import numpy as np
-import pandas as pd
-import time 
+
+
 
 
 
@@ -294,7 +302,7 @@ class CHIP:
         os.mkdir( norm_spectra_dir_path )
 
         start_time = time.time()
-        Parallel( n_jobs = 2 )(delayed( contfit_alpha_hull )(star_name,
+        Parallel( n_jobs = 1 )(delayed( contfit_alpha_hull )(star_name,
                                     self.spectraDic[star_name],
                                     self.ivarDic[star_name],
                                     self.wl_solution,
@@ -309,7 +317,8 @@ class CHIP:
 
         end_time = time.time()
         logging.info(f"It took alphanorm, {end_time - start_time} to finish!")
-        for star_name in self.spectraDic:
+        print(f"It took alphanorm, {end_time - start_time} to finish!")
+        for star_name in list(self.spectraDic):
             try:
                 specnorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_specnorm.npy")
                 sigmanorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_sigmanorm.npy")
@@ -332,11 +341,6 @@ if __name__ == "__main__":
     # Instantiation
     chip = CHIP()
 
-    # logging 
-    logging.basicConfig(filename=os.path.join(chip.storage_path, 'CHIP.log'),
-                        format='%(asctime)s - %(message)s', 
-                        datefmt="%Y/%m/%d %H:%M:%S",  
-                        level=logging.INFO)
     # logs to file and stdout
     logging.getLogger().addHandler(logging.StreamHandler())
     # set datefmt to GMT

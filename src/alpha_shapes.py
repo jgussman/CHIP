@@ -280,10 +280,11 @@ def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=Fal
         spec_norm_nopeaks = spec_norm_nopeaks[1:]
 
         # Save spectrum, no peaks
-        np.save(save_dir+'%s_specnorm_nopeaks.npy' %(starname), spec_norm_nopeaks)
+        np.save( os.path.join(save_dir, '%s_specnorm_nopeaks.npy' %(starname)), spec_norm_nopeaks)
 
     # Save uncertainty
-    np.save(save_dir+'%s_sigmanorm.npy' %(starname), spec_norm)
+    np.save( os.path.join(save_dir, '%s_sigmanorm.npy' %(starname)), sigma_norm)
+    
 
     if plot == True:
         plt.plot(np.ndarray.flatten(spec_norm_nopeaks), color='purple')
