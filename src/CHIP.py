@@ -323,12 +323,8 @@ class CHIP:
                 del self.spectraDic[star_name]
                 del self.ivarDic[star_name]
                 self.removed_stars["Normalization error"].append(star_name)
-                        
-
         
-
-
-
+        
 
 if __name__ == "__main__":
     
