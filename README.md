@@ -9,7 +9,7 @@
 
     [X] find_rv_obs_with_highest_snr
 
-    [ ] Alpha Normalize (use multiprocessing)
+    [X] Alpha Normalize (use multiprocessing)
 
     [ ] CrossCorrelate (use multiprocessing)
 
