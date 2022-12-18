@@ -17,10 +17,7 @@ from hiresprv.database import Database
 from hiresprv.download import Download
 from hiresprv.idldriver import Idldriver
 from joblib import Parallel, delayed 
-
-
-
-
+from PyAstronomy import pyasl
 
 
 
@@ -90,6 +87,7 @@ class CHIP:
         with open("src/config.json", "r") as f:
             self.config = json.load(f)
         
+        self.cores = self.config["CHIP"]["cores"]["val"]
         logging.info( f"config.json : {self.config}" )
     
 
@@ -262,7 +260,6 @@ class CHIP:
                                            index_label=False,
                                            index=False)
         
-        
         self.update_removedstars()
 
         # Delete unused instance attributes
@@ -301,6 +298,7 @@ class CHIP:
         Output: None
         '''
         logging.info("CHIP.alpha_normalization( )")
+        start_time = time.perf_counter()
         
         # Trim wl_solution 
         self.wl_solution = np.load("data/spocs/wl_solution.npy")
@@ -311,13 +309,13 @@ class CHIP:
         norm_spectra_dir_path = os.path.join( self.storage_path, "norm_spectra" )
         os.mkdir( norm_spectra_dir_path )
 
-        start_time = time.time()
-        cores = self.config["CHIP"]["cores"]["val"]
-        Parallel( n_jobs = cores )(delayed( contfit_alpha_hull )(star_name,
-                                            self.spectraDic[star_name],
-                                            self.ivarDic[star_name],
-                                            self.wl_solution,
-                                            norm_spectra_dir_path) for star_name in self.spectraDic)
+        
+        
+        Parallel( n_jobs = self.cores )(delayed( contfit_alpha_hull )(star_name,
+                                                 self.spectraDic[star_name],
+                                                 self.ivarDic[star_name],
+                                                 self.wl_solution,
+                                                 norm_spectra_dir_path) for star_name in self.spectraDic)
 
         # Load all the normalized files into their respective dictionaries 
         for star_name in list(self.spectraDic):
@@ -335,23 +333,109 @@ class CHIP:
         
         self.update_removedstars()
         
-        end_time = time.time()
+        end_time = time.perf_counter()
         logging.info(f"It took CHIP.alpha_normalization, {end_time - start_time} to finish!")
         
-    def crosscorrelate(self):
+    def cross_correlate_spectra(self):
         ''' Shift all spectra and ivars to the rest wavelength. 
 
         Input: None
 
         Output: None
         '''
-        logging.info("CHIP.cross_correlate( )")
+        logging.info("CHIP.cross_correlate_spectra( )")
+
+        start_time = time.perf_counter()
+
+        # the amount of pixels to cut off both ends of the spectra.
+        numOfEdgesToSkip = 200
+
+        # Load in stellar data
+        solar = np.load('data/constants/solarAtlas.npy')
+        sun_wvlen = solar[:,1][::-1]
+        sun_flux = solar[:,4][::-1]
+
+        # The echelle orders that will be used for calculating 
+        # each stars' cross correlation 
+        # Found that the 15th order works just fine alone
+        # If there are 16 echelle orders, the first echelle order is 0
+        echelle_orders_list = [15,]
+        # Key (int) echelle order number : tuple containing two 1-D numpy arrays representing 
+        # wavelength of the echelle order then the flux in that echelle order.
+        sollar_echelle_dic = {} 
+        # Remove all the wavelengths that do fall in 
+        # the HIRES wavelength solution's range 
+        for echelle_order_num in echelle_orders_list:
+            # The HIRES spectra's wavelength set needs to be 
+            # in the range of the max and min of the solar's wavelength 
+            offset_wvlens = 1 
+            echelle_mask = np.logical_and( (self.wl_solution[echelle_order_num][0]  - offset_wvlens) <= sun_wvlen,
+                                           (self.wl_solution[echelle_order_num][-1] + offset_wvlens) >= sun_wvlen)
+            # Apply Mask
+            sun_echelle_wvlen = sun_wvlen[echelle_mask]
+            sun_echelle_flux = sun_flux[echelle_mask]
+
+            sollar_echelle_dic[echelle_order_num] = (sun_echelle_wvlen,
+                                                    sun_echelle_flux)
+
+        # Make cross correlate dir
+        cross_correlate_dir = os.path.join(self.storage_path, "cr_cor")
+        os.makedirs(cross_correlate_dir,exist_ok=True) 
+
+        def cross_correlate_spectrum(filename):
+            ''' Uses Pyastronomy's crosscorrRV function to compute the cross correlation.
+                This will alter the key:value structure of self.spectraDic. self.spectraDic's
+                key value pair will be  filename:(wavelength array, flux array)
+            
+            Input: filename (str): HIRES file name of spectrum you want to cross correlate 
+
+            Output: None
+            '''
+            logging.info("CHIP.cross_correlate_spectrum( )")
+
+            # Range of radial velocity values to choose from 
+            # for example if set to 20, crosscorrRV will check 
+            # [-20,20] in steps of 20/200.
+            # 60 also gave good results
+            RV = 80  
+
+            #Going to take the average of all the echelle shifts
+            z_list = []  
+            for echelle_num in sollar_echelle_dic: #echelle orders
+                # HIRES (h)
+                h_wv = self.wl_solution[echelle_num]  #hires 
+                h_flux = self.spectraDic[filename][echelle_num]
+                # Solar (s)
+                s_wv = sollar_echelle_dic[echelle_num]         
+                s_flux = sollar_echelle_dic[echelle_num]
+
+                rv, cc = pyasl.crosscorrRV(h_wv, h_flux,
+                                        s_wv,s_flux, 
+                                        -1*RV, RV, RV/200., 
+                                        skipedge=numOfEdgesToSkip)
+                
+                argRV = rv[np.argmax(cc)]  #UNITS: km/s 
+                z = (argRV/299_792.458) #UNITS: None 
+                z_list.append(z)
+                
+            avg_z = np.mean(z_list)   
+            shifted_wl = self.wl_solution.copy() / (1 + avg_z)
+
+            self.spectraDic[filename] = (shifted_wl,self.spectraDic[filename])
+
 
         
+        Parallel( n_jobs = self.cores, 
+                  shared_memory = self.spectraDic )\
+                (delayed( cross_correlate_spectrum )\
+                        (star_name) for star_name in list(self.spectraDic))
         
-        
+        end_time = time.perf_counter()
+        logging.info(f"It took CHIP.cross_correlate_spectra, {end_time - start_time} to finish!")
 
-        print("Cross Correlate Has Finished")
+    
+
+
         
 
 if __name__ == "__main__":
@@ -367,6 +451,8 @@ if __name__ == "__main__":
     chip.download_spectra()
 
     chip.alpha_normalization()
+
+    chip.cross_correlate_spectra()
 
     
 
