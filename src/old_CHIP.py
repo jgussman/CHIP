@@ -308,7 +308,7 @@ class CHIP:
                     argRV = rv[np.argmax(cc)]  #UNITS: km/s 
                     z = (argRV/299_792.458) #UNITS: None 
                     z_list.append(z)
-
+                    
                 avg_z = np.mean(z_list)    
                 computeShiftedWavelength = lambda wl: wl/ (1 + avg_z)  #UNITS: Angstroms
                 #There has to be a better way to convert to a numpy array

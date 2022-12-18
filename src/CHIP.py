@@ -154,7 +154,18 @@ class CHIP:
                 # Trim the left and right sides of each echelle order 
                 trim =  self.config["CHIP"]["trim_spectrum"]["val"]
                 return temp_deblazedFlux[:, trim: -trim]
+    
+
+    def update_removedstars(self):
+        ''' Helper method to insure removed_stars will be updated properly accross each method.
         
+        Input: None
+
+        Output: None
+        '''
+        pd.DataFrame(self.removed_stars_df).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
+                                           index_label=False,
+                                           index=False)
         
     def download_spectra(self):
         ''' Downloads all the spectra for each star in the NExSci, calculates 
@@ -251,14 +262,13 @@ class CHIP:
                                            index_label=False,
                                            index=False)
         
-        pd.DataFrame(self.removed_stars).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
-                                           index_label=False,
-                                           index=False) 
+        
+        self.update_removedstars()
 
         # Delete unused instance attributes
         del self.dataSpectra
         del self.state
-        
+    
 
     def sigma_calculation(self,filename , star_ID):
         '''Calculates sigma for inverse variance (IVAR) 
@@ -283,20 +293,20 @@ class CHIP:
             del self.spectraDic[filename]
 
 
-    def alphanormalization(self):
+    def alpha_normalization(self):
         ''' Rolling Continuum Normalization.  
 
         Input: None
 
         Output: None
         '''
-        logging.info("CHIP.alphanormalization( )")
+        logging.info("CHIP.alpha_normalization( )")
         
         # Trim wl_solution 
         self.wl_solution = np.load("data/spocs/wl_solution.npy")
         trim =  self.config["CHIP"]["trim_spectrum"]["val"]
         self.wl_solution = self.wl_solution[:, trim: -trim]
-            
+    
         # Create Normalized Spectra dir
         norm_spectra_dir_path = os.path.join( self.storage_path, "norm_spectra" )
         os.mkdir( norm_spectra_dir_path )
@@ -309,21 +319,39 @@ class CHIP:
                                             self.wl_solution,
                                             norm_spectra_dir_path) for star_name in self.spectraDic)
 
-        end_time = time.time()
-        logging.info(f"It took alphanorm, {end_time - start_time} to finish!")
-
+        # Load all the normalized files into their respective dictionaries 
         for star_name in list(self.spectraDic):
             try:
                 specnorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_specnorm.npy")
                 sigmanorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_sigmanorm.npy")
                 self.spectraDic[star_name] = np.load(specnorm_path).flatten()
                 self.ivarDic[star_name] = np.load(sigmanorm_path).flatten()
-            except:
-                logging.info(f'''Something went wrong with {star_name}'s normalization. We have removed the star.''')
-                del self.spectraDic[star_name]
-                del self.ivarDic[star_name]
-                self.removed_stars["Normalization error"].append(star_name)
+            except FileNotFoundError as e:
+                if isinstance(e,FileNotFoundError):
+                    logging.info(f'''{star_name}'s normalization files were not found. We have removed the star.''')
+                    del self.spectraDic[star_name]
+                    del self.ivarDic[star_name]
+                    self.removed_stars["Normalization error"].append(star_name)
         
+        self.update_removedstars()
+        
+        end_time = time.time()
+        logging.info(f"It took CHIP.alpha_normalization, {end_time - start_time} to finish!")
+        
+    def crosscorrelate(self):
+        ''' Shift all spectra and ivars to the rest wavelength. 
+
+        Input: None
+
+        Output: None
+        '''
+        logging.info("CHIP.cross_correlate( )")
+
+        
+        
+        
+
+        print("Cross Correlate Has Finished")
         
 
 if __name__ == "__main__":
@@ -338,7 +366,7 @@ if __name__ == "__main__":
 
     chip.download_spectra()
 
-    chip.alphanormalization()
+    chip.alpha_normalization()
 
     
 
