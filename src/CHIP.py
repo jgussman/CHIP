@@ -1,9 +1,4 @@
 import logging
-# logging 
-logging.basicConfig(filename= 'CHIP.log',
-                    format='%(asctime)s - %(message)s', 
-                    datefmt="%Y/%m/%d %H:%M:%S",  
-                    level=logging.INFO)
 import json
 import os
 import numpy as np
@@ -439,20 +434,44 @@ class CHIP:
         
 
 if __name__ == "__main__":
-    
-    # Instantiation
-    chip = CHIP()
+
+    log_filepath = 'data/CHIP.log'
+    logging.basicConfig(filename= log_filepath,
+                        format='%(asctime)s - %(message)s', 
+                        datefmt="%Y/%m/%d %H:%M:%S",  
+                        level=logging.INFO)
 
     # logs to file and stdout
     logging.getLogger().addHandler(logging.StreamHandler())
+
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
-    chip.download_spectra()
+    # Log a message
+    logging.info('This is a test message')
 
-    chip.alpha_normalization()
+    try:
+        
+        # Instantiation
+        chip = CHIP()
 
-    chip.cross_correlate_spectra()
+        chip.download_spectra()
+
+        chip.alpha_normalization()
+
+        chip.cross_correlate_spectra()
+
+    except Exception as e:
+        pass 
+
+    finally:
+        # Move logging file to the location of this current run
+        log_filename = os.path.basename(log_filepath)
+        # Shutdown logging so the file can be put in the storage location
+        logging.shutdown()
+        os.rename( log_filepath, 
+                  os.path.join( chip.storage_path ,log_filename) )
+
 
     
 
