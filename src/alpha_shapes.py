@@ -3,7 +3,7 @@ import alphashape
 from descartes import PolygonPatch
 from astropy.io import fits
 import matplotlib.pyplot as plt
-from localreg import *
+# from localreg import * # If this is uncommented logging will not work
 from astropy.io import fits
 import os 
 
