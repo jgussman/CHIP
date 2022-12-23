@@ -11,7 +11,7 @@
 
     [X] Alpha Normalize (use multiprocessing)
 
-    [ ] CrossCorrelate (use multiprocessing)
+    [X] CrossCorrelate (use multiprocessing)
 
     [ ] Interpolate 
 

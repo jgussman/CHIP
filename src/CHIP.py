@@ -427,6 +427,8 @@ class CHIP:
         end_time = time.perf_counter()
         logging.info(f"It took CHIP.cross_correlate_spectra, {end_time - start_time} to finish!")
 
+        
+
     
 
 
