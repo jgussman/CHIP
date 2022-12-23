@@ -156,9 +156,9 @@ class CHIP:
 
         Output: None
         '''
-        pd.DataFrame(self.removed_stars_df).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
-                                           index_label=False,
-                                           index=False)
+        pd.DataFrame(self.removed_stars).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
+                                                 index_label=False,
+                                                 index=False)
         
     def download_spectra(self):
         ''' Downloads all the spectra for each star in the NExSci, calculates 
@@ -317,11 +317,11 @@ class CHIP:
             try:
                 specnorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_specnorm.npy")
                 sigmanorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_sigmanorm.npy")
-                self.spectraDic[star_name] = np.load(specnorm_path).flatten()
-                self.ivarDic[star_name] = np.load(sigmanorm_path).flatten()
+                self.spectraDic[star_name] = np.load(specnorm_path) # TODO: .flatten()
+                self.ivarDic[star_name] = np.load(sigmanorm_path) # TODO: .flatten()
             except FileNotFoundError as e:
                 if isinstance(e,FileNotFoundError):
-                    logging.info(f'''{star_name}'s normalization files were not found. We have removed the star.''')
+                    logging.error(f'''{star_name}'s normalization files were not found. We have removed the star.''')
                     del self.spectraDic[star_name]
                     del self.ivarDic[star_name]
                     self.removed_stars["Normalization error"].append(star_name)
@@ -330,9 +330,9 @@ class CHIP:
         
         end_time = time.perf_counter()
         logging.info(f"It took CHIP.alpha_normalization, {end_time - start_time} to finish!")
-        
+
     def cross_correlate_spectra(self):
-        ''' Shift all spectra and ivars to the rest wavelength. 
+        ''' Shift all spectra and sigmas to the rest wavelength. 
 
         Input: None
 
@@ -341,9 +341,8 @@ class CHIP:
         logging.info("CHIP.cross_correlate_spectra( )")
 
         start_time = time.perf_counter()
-
-        # the amount of pixels to cut off both ends of the spectra.
-        numOfEdgesToSkip = 200
+        # the amount of pixels to ignore during cross-corrl
+        numOfEdgesToSkip = 100
 
         # Load in stellar data
         solar = np.load('data/constants/solarAtlas.npy')
@@ -363,7 +362,7 @@ class CHIP:
         for echelle_order_num in echelle_orders_list:
             # The HIRES spectra's wavelength set needs to be 
             # in the range of the max and min of the solar's wavelength 
-            offset_wvlens = 1 
+            offset_wvlens = 0
             echelle_mask = np.logical_and( (self.wl_solution[echelle_order_num][0]  - offset_wvlens) <= sun_wvlen,
                                            (self.wl_solution[echelle_order_num][-1] + offset_wvlens) >= sun_wvlen)
             # Apply Mask
@@ -374,8 +373,8 @@ class CHIP:
                                                     sun_echelle_flux)
 
         # Make cross correlate dir
-        cross_correlate_dir = os.path.join(self.storage_path, "cr_cor")
-        os.makedirs(cross_correlate_dir,exist_ok=True) 
+        cross_correlate_dir_path = os.path.join(self.storage_path, "cr_cor")
+        os.makedirs(cross_correlate_dir_path,exist_ok=True) 
 
         def cross_correlate_spectrum(filename):
             ''' Uses Pyastronomy's crosscorrRV function to compute the cross correlation.
@@ -398,11 +397,11 @@ class CHIP:
             z_list = []  
             for echelle_num in sollar_echelle_dic: #echelle orders
                 # HIRES (h)
-                h_wv = self.wl_solution[echelle_num]  #hires 
+                h_wv = self.wl_solution[echelle_num]  
                 h_flux = self.spectraDic[filename][echelle_num]
                 # Solar (s)
-                s_wv = sollar_echelle_dic[echelle_num]         
-                s_flux = sollar_echelle_dic[echelle_num]
+                s_wv = sollar_echelle_dic[echelle_num][0]        
+                s_flux = sollar_echelle_dic[echelle_num][1]
 
                 rv, cc = pyasl.crosscorrRV(h_wv, h_flux,
                                         s_wv,s_flux, 
@@ -416,22 +415,20 @@ class CHIP:
             avg_z = np.mean(z_list)   
             shifted_wl = self.wl_solution.copy() / (1 + avg_z)
 
-            self.spectraDic[filename] = (shifted_wl,self.spectraDic[filename])
+            # Save cross-correlated spectra 
+            np.save( os.path.join(cross_correlate_dir_path, filename + "_shiftedwavelength.npy" ), shifted_wl )
 
 
         
-        Parallel( n_jobs = self.cores, 
-                  shared_memory = self.spectraDic )\
+        Parallel( n_jobs = self.cores )\
                 (delayed( cross_correlate_spectrum )\
-                        (star_name) for star_name in list(self.spectraDic))
+                (star_name) for star_name in list(self.spectraDic))
         
         end_time = time.perf_counter()
         logging.info(f"It took CHIP.cross_correlate_spectra, {end_time - start_time} to finish!")
 
     
 
-
-        
 
 if __name__ == "__main__":
 
@@ -447,22 +444,28 @@ if __name__ == "__main__":
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
-    # Log a message
-    logging.info('This is a test message')
+    
+    chip = CHIP()
+
+    chip.download_spectra()
+
+    chip.alpha_normalization()
+
+    chip.cross_correlate_spectra()
 
     try:
-        
+        pass
         # Instantiation
-        chip = CHIP()
+        # chip = CHIP()
 
-        chip.download_spectra()
+        # chip.download_spectra()
 
-        chip.alpha_normalization()
+        # chip.alpha_normalization()
 
-        chip.cross_correlate_spectra()
+        # chip.cross_correlate_spectra()
 
     except Exception as e:
-        pass 
+        print(e) 
 
     finally:
         # Move logging file to the location of this current run
