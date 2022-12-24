@@ -64,9 +64,23 @@ class CHIP:
         Outputs: None
         
         '''
-        # TODO: implement end-to-end run of CHIP
+        
+        if self.config["CHIP"]["run"]["val"]:
+            version_num = self.config["CHIP"]["version"] 
+            logging.info(f"CHIP v{version_num}")
 
-        pass 
+            self.download_spectra()
+
+            self.alpha_normalization()
+
+            self.cross_correlate_spectra()
+
+            self.interpolate()
+        
+        elif self.config["TheCannon"]["run"]["val"]:
+            pass
+        else:
+            logging.error("Neither CHIP or The Cannon were selected to run in config.json! Please select!")
 
 
     def get_arguments(self):
@@ -83,6 +97,7 @@ class CHIP:
             self.config = json.load(f)
         
         self.cores = self.config["CHIP"]["cores"]["val"]
+        self.trim  = self.config["CHIP"]["trim_spectrum"]["val"]
         logging.info( f"config.json : {self.config}" )
     
 
@@ -145,8 +160,7 @@ class CHIP:
                 return SNR
             else:
                 # Trim the left and right sides of each echelle order 
-                trim =  self.config["CHIP"]["trim_spectrum"]["val"]
-                return temp_deblazedFlux[:, trim: -trim]
+                return temp_deblazedFlux[:, self.trim: -self.trim]
     
 
     def update_removedstars(self):
@@ -169,6 +183,8 @@ class CHIP:
         Outputs: None
         '''
         logging.info("CHIP.download_spectra( )")
+
+        start_time = time.perf_counter()
 
         # Cross matched names 
         cross_matched_file_path = self.config["CHIP"]["cross_match_stars"]["val"]
@@ -260,6 +276,9 @@ class CHIP:
         # Delete unused instance attributes
         del self.dataSpectra
         del self.state
+
+        end_time = time.perf_counter()
+        logging.info(f"It took CHIP.download_spectra, {end_time - start_time} to finish!")
     
 
     def sigma_calculation(self,filename , star_ID):
@@ -297,20 +316,20 @@ class CHIP:
         
         # Trim wl_solution 
         self.wl_solution = np.load("data/spocs/wl_solution.npy")
-        trim =  self.config["CHIP"]["trim_spectrum"]["val"]
-        self.wl_solution = self.wl_solution[:, trim: -trim]
+        self.wl_solution = self.wl_solution[:, self.trim: -self.trim]
     
         # Create Normalized Spectra dir
         self.norm_spectra_dir_path = os.path.join( self.storage_path, "norm" )
         os.mkdir( self.norm_spectra_dir_path )
 
-        
-        
-        Parallel( n_jobs = self.cores )(delayed( contfit_alpha_hull )(star_name,
-                                                 self.spectraDic[star_name],
-                                                 self.ivarDic[star_name],
-                                                 self.wl_solution,
-                                                 self.norm_spectra_dir_path) for star_name in self.spectraDic)
+        # Start parallel computing
+        Parallel( n_jobs = self.cores )\
+                (delayed( contfit_alpha_hull )\
+                        (star_name,
+                         self.spectraDic[star_name],
+                         self.ivarDic[star_name],
+                         self.wl_solution,
+                         self.norm_spectra_dir_path) for star_name in self.spectraDic)
 
         # Load all the normalized files into their respective dictionaries 
         for star_name in list(self.spectraDic):
@@ -330,6 +349,7 @@ class CHIP:
         
         end_time = time.perf_counter()
         logging.info(f"It took CHIP.alpha_normalization, {end_time - start_time} to finish!")
+
 
     def cross_correlate_spectra(self):
         ''' Shift all spectra and sigmas to the rest wavelength. 
@@ -436,11 +456,11 @@ class CHIP:
         '''
         logging.info("CHIP.interpolate( )")
 
+        start_time = time.perf_counter()
+
         # Make interpolation dir
         self.interpolate_dir_path = os.path.join(self.storage_path, "inter")
         os.makedirs(self.interpolate_dir_path,exist_ok=True) 
-
-
 
         # Create an array filled with -np.inf,np.inf 
         # 0th column is the min wavelength for that echelle order
@@ -478,20 +498,22 @@ class CHIP:
             np.save( spec_path, self.spectraDic[star_name][mask] )
             np.save( ivar_path, self.ivarDic[star_name][mask]    )
 
+        end_time = time.perf_counter()
+        logging.info(f"It took CHIP.interpolate, {end_time - start_time} to finish!")
 
+    def load_the_cannon(self):
+        ''' Load in the data The Cannon will use. 
+        
+        Input: None
 
+        Output: None
+        '''
+        pass
         
 
-            
-
-
-        
-        
 
 
 
-
-    
 
 
 if __name__ == "__main__":
@@ -504,20 +526,12 @@ if __name__ == "__main__":
 
     # logs to file and stdout
     logging.getLogger().addHandler(logging.StreamHandler())
-
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
     try:
-        chip = CHIP()
-
-        chip.download_spectra()
-
-        chip.alpha_normalization()
-
-        chip.cross_correlate_spectra()
-
-        chip.interpolate()
+        chip = CHIP()   
+        chip.run()
 
     except Exception as e:
         logging.error(e) 

@@ -5,7 +5,7 @@
 
 ---
 
-[ ] Refactor CHIP
+[X] Refactor CHIP
 
     [X] find_rv_obs_with_highest_snr
 
@@ -13,7 +13,7 @@
 
     [X] CrossCorrelate (use multiprocessing)
 
-    [ ] Interpolate 
+    [X] Interpolate 
 
 [ ] Refactor TheCannonCHIP
 

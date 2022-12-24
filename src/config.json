@@ -1,6 +1,7 @@
 {   
  
     "CHIP": {
+        "version": "0.5.0",
 
         "description": "Arguments for CHIP.py",
     
@@ -32,14 +33,42 @@
     },
 
     "TheCannon":{
+
+        "version": "0.1.0",
         
         "description": "Arguments for TheCannon.py",
 
         "run" : { 
-            "val": false,
-            "description": "Do you want to run CHIP?"
-        }
+            "val": "2022-12-24_06-57-37",
+            "description": "If you want to run The Cannon set val to the name of the dir inside data/chip_runs you want to use (ex: 2022-12-24_06-57-37). Otherwise set to false."
+        },
 
+        "random seed" : { 
+            "val": 3,
+            "description": "Random seed for reproducability."
+        },
+
+        "train test split" :{
+            "val": 0.4,
+            "description": "what fraction of the data set do you want to use for testing (ex: 0.4, 60% of the data set will be used for training, and 40% will be used for testing the best model)"
+        },
+
+        "train valid split" :{
+            "val": 0.2,
+            "description": "what fraction of the data set do you want to use for validation during training (ex: 0.2, 80% of the data set will be used for training, and 20% will be used for testing the best model)"
+        },
+
+        "stellar parameters" : {
+            "val": ["TEFF", "LOGG","VSINI", "FeH", "CH", "NH","OH","NaH", "MgH", "AlH", "SiH", "CaH", "TiH", "VH", "CrH", "MnH","NiH", "YH"],
+            "description": "A list of the stellar parameters you want to train The Cannon on. The names need to reflect the spelling in data/spocs/stellar_parameters.csv."
+        },
+
+        "cost function" : {
+            "name": "Mean Error",
+            "function" : "lambda true_array,predicted_array:  np.mean(true_array - predicted_array)",
+            "description" : "A lambda function and associated name of function, for computing the cost of a model."
+        }
+ 
     }
 
 }
