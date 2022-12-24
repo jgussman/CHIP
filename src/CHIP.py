@@ -301,8 +301,8 @@ class CHIP:
         self.wl_solution = self.wl_solution[:, trim: -trim]
     
         # Create Normalized Spectra dir
-        norm_spectra_dir_path = os.path.join( self.storage_path, "norm_spectra" )
-        os.mkdir( norm_spectra_dir_path )
+        self.norm_spectra_dir_path = os.path.join( self.storage_path, "norm" )
+        os.mkdir( self.norm_spectra_dir_path )
 
         
         
@@ -310,15 +310,15 @@ class CHIP:
                                                  self.spectraDic[star_name],
                                                  self.ivarDic[star_name],
                                                  self.wl_solution,
-                                                 norm_spectra_dir_path) for star_name in self.spectraDic)
+                                                 self.norm_spectra_dir_path) for star_name in self.spectraDic)
 
         # Load all the normalized files into their respective dictionaries 
         for star_name in list(self.spectraDic):
             try:
-                specnorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_specnorm.npy")
-                sigmanorm_path = os.path.join( norm_spectra_dir_path , f"{star_name}_sigmanorm.npy")
-                self.spectraDic[star_name] = np.load(specnorm_path) # TODO: .flatten()
-                self.ivarDic[star_name] = np.load(sigmanorm_path) # TODO: .flatten()
+                specnorm_path = os.path.join( self.norm_spectra_dir_path , f"{star_name}_specnorm.npy")
+                sigmanorm_path = os.path.join( self.norm_spectra_dir_path , f"{star_name}_sigmanorm.npy")
+                self.spectraDic[star_name] = np.load(specnorm_path) 
+                self.ivarDic[star_name] = np.load(sigmanorm_path) 
             except FileNotFoundError as e:
                 if isinstance(e,FileNotFoundError):
                     logging.error(f'''{star_name}'s normalization files were not found. We have removed the star.''')
@@ -373,8 +373,8 @@ class CHIP:
                                                     sun_echelle_flux)
 
         # Make cross correlate dir
-        cross_correlate_dir_path = os.path.join(self.storage_path, "cr_cor")
-        os.makedirs(cross_correlate_dir_path,exist_ok=True) 
+        self.cross_correlate_dir_path = os.path.join(self.storage_path, "cr_cor")
+        os.makedirs(self.cross_correlate_dir_path,exist_ok=True) 
 
         def cross_correlate_spectrum(filename):
             ''' Uses Pyastronomy's crosscorrRV function to compute the cross correlation.
@@ -416,10 +416,9 @@ class CHIP:
             shifted_wl = self.wl_solution.copy() / (1 + avg_z)
 
             # Save cross-correlated spectra 
-            np.save( os.path.join(cross_correlate_dir_path, filename + "_shiftedwavelength.npy" ), shifted_wl )
+            np.save( os.path.join(self.cross_correlate_dir_path, filename + "_shiftedwavelength.npy" ), shifted_wl )
 
 
-        
         Parallel( n_jobs = self.cores )\
                 (delayed( cross_correlate_spectrum )\
                 (star_name) for star_name in list(self.spectraDic))
@@ -427,7 +426,70 @@ class CHIP:
         end_time = time.perf_counter()
         logging.info(f"It took CHIP.cross_correlate_spectra, {end_time - start_time} to finish!")
 
+
+    def interpolate(self):
+        ''' This method downloads the interpolated wavelength to interpolated_wl.npy 
+
+        Input: None
+
+        Output: None
+        '''
+        logging.info("CHIP.interpolate( )")
+
+        # Make interpolation dir
+        self.interpolate_dir_path = os.path.join(self.storage_path, "inter")
+        os.makedirs(self.interpolate_dir_path,exist_ok=True) 
+
+
+
+        # Create an array filled with -np.inf,np.inf 
+        # 0th column is the min wavelength for that echelle order
+        # 1st column is the min wavelength for that echelle order
+        all_min_max_echelle = np.full((16,2), np.inf)
+        all_min_max_echelle[:,0] = -all_min_max_echelle[:,0]
+
+        for star_name in list(self.spectraDic):
+            star_file_path = os.path.join(self.cross_correlate_dir_path, star_name + "_shiftedwavelength.npy")
+            star_rest_wavelength = np.load( star_file_path )
+            
+            # Given an array star_rest_wavelength, that is (16,N). Produce array B, 
+            # that is (16,2) where the 0th column is the first 
+            # element from each row from star_rest_wavelength, and the 1st column 
+            # is the last element of each row from star_rest_wavelength.
+            star_min_max_echelle = np.column_stack((star_rest_wavelength[:,0], star_rest_wavelength[:,-1]))
+
+            # Update the values in all_min_max_echelle with the corresponding values in star_min_max_echelle
+            all_min_max_echelle[:,0] = np.maximum(all_min_max_echelle[:,0], star_min_max_echelle[:,0])
+            all_min_max_echelle[:,1] = np.minimum(all_min_max_echelle[:,1], star_min_max_echelle[:,1])
+
+        # Create a boolean mask indicating which elements of wl_solution fall within the ranges in all_min_max_echelle
+        mask = np.logical_and(self.wl_solution >= all_min_max_echelle[:,0:1], 
+                              self.wl_solution <= all_min_max_echelle[:,1:2])
+
+        # Use the mask to select the desired elements of wl_solution then save 
+        filtered_wl_solution = self.wl_solution[mask]
+        np.save( os.path.join(self.interpolate_dir_path, "wl.npy"), filtered_wl_solution )
+
+        # Apply mask to all the spectra and ivars then save 
+        for star_name in list(self.spectraDic):
+            spec_path = os.path.join( self.interpolate_dir_path , f"{star_name}_spec.npy")
+            ivar_path = os.path.join( self.interpolate_dir_path , f"{star_name}_ivar.npy")
+
+            np.save( spec_path, self.spectraDic[star_name][mask] )
+            np.save( ivar_path, self.ivarDic[star_name][mask]    )
+
+
+
         
+
+            
+
+
+        
+        
+
+
+
 
     
 
@@ -446,28 +508,19 @@ if __name__ == "__main__":
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
-    
-    chip = CHIP()
-
-    chip.download_spectra()
-
-    chip.alpha_normalization()
-
-    chip.cross_correlate_spectra()
-
     try:
-        pass
-        # Instantiation
-        # chip = CHIP()
+        chip = CHIP()
 
-        # chip.download_spectra()
+        chip.download_spectra()
 
-        # chip.alpha_normalization()
+        chip.alpha_normalization()
 
-        # chip.cross_correlate_spectra()
+        chip.cross_correlate_spectra()
+
+        chip.interpolate()
 
     except Exception as e:
-        print(e) 
+        logging.error(e) 
 
     finally:
         # Move logging file to the location of this current run
