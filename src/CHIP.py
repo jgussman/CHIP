@@ -13,32 +13,32 @@ from hiresprv.download import Download
 from hiresprv.idldriver import Idldriver
 from joblib import Parallel, delayed 
 from PyAstronomy import pyasl
+from sklearn.model_selection import train_test_split
+from TheCannon import model 
 
 
 
 class CHIP:
+    chip_version = "v1.0.0"
+    thecannon_version = "v0.5.0"
 
     def __init__(self):
         '''
         
         '''
-        # Create a new storage location for this pipeline
-        self.create_storage_location()
-
-        # login into the NExSci servers
-        login('data/prv.cookies')
-
         # Get arguments from config.json
         self.get_arguments()
 
-        # HIRES Filename : spectrum as a (16,4021) np.array  
-        self.spectraDic = {}            
+        # create storage location 
+        self.create_storage_location()
 
+        # if running CHIP HIRES, Filename : spectrum as a (16,N pixels) np.array  
+        # if running The Cannon, HIRES ID : spectrum as a (16,N pixels) np.array 
+        self.spectraDic = {}            
         # For storing sigma valeus
         self.ivarDic = {}                
 
                                                                                      
-    
     def create_storage_location(self):
         ''' Creates a unique subdirectory in the data directory to store the outputs of CHIP
         
@@ -48,13 +48,41 @@ class CHIP:
         '''
         logging.debug("CHIP.create_storage_location( )")
 
-        # Greenwich Mean Time (UTC) right now 
-        gmt_datetime = time.strftime("%Y-%m-%d_%H-%M-%S",time.gmtime())
 
-        self.storage_path = os.path.join("data","chip_runs" , gmt_datetime )
+        # If we are running preprocessing then we want a new 
+        # CHIP run sub dir else we are running The Cannon
+        # and want to use a previous run 
+        if self.config["CHIP"]["run"]["val"]:
+            # Create a new storage location for this pipeline
+            # Greenwich Mean Time (UTC) right now 
+            gmt_datetime = time.strftime("%Y-%m-%d_%H-%M-%S",time.gmtime())
 
-        os.makedirs(self.storage_path,exist_ok=True)
-        
+            self.storage_path = os.path.join("data","chip_runs" , gmt_datetime )
+
+            # login into the NExSci servers
+            login('data/prv.cookies')
+
+        else:
+            # What chip run is going to be used
+            chip_run_subdir = self.config["The Cannon"]["run"]["val"]
+            self.data_dir_path = os.path.join("data/chip_runs",chip_run_subdir)
+
+            if not(os.path.exists(self.data_dir_path)):
+                logging.error(f'Your inputed sub dir name for ["The Cannon"]["run"]["val"] does not exist. {self.data_dir_path}')
+            
+            # Make The Cannon Results dir 
+            # semi-unique subdir naming convention
+            # random seed _ testing fraction _ validation fraction _ cost function name (spaces filled with -)
+            rand_seed = self.config["The Cannon"]["random seed"]["val"]
+            test_frac = self.config["The Cannon"]["train test split"]["val"]
+            vali_frac = self.config["The Cannon"]["train valid split"]["val"]
+            cost_fun  = self.config["The Cannon"]["cost function"]["name"].replace(" ", "-")
+            semi_unique_subdir = f"{rand_seed}_{test_frac}_{vali_frac}_{cost_fun}"
+            
+            self.storage_path = os.path.join( self.data_dir_path, "cannon_results", semi_unique_subdir )
+            
+        os.makedirs( self.storage_path, exist_ok= True )
+
         
     def run(self):
         ''' Run the pipeline from end to end. 
@@ -62,12 +90,10 @@ class CHIP:
         Inputs: None
 
         Outputs: None
-        
         '''
         
         if self.config["CHIP"]["run"]["val"]:
-            version_num = self.config["CHIP"]["version"] 
-            logging.info(f"CHIP v{version_num}")
+            logging.info(f"CHIP {self.chip_version}")
 
             self.download_spectra()
 
@@ -77,20 +103,22 @@ class CHIP:
 
             self.interpolate()
         
-        elif self.config["TheCannon"]["run"]["val"]:
-            pass
+        elif self.config["The Cannon"]["run"]["val"]:
+            logging.info(f"The Cannon {self.thecannon_version}")
+
+            self.load_the_cannon()
+
         else:
             logging.error("Neither CHIP or The Cannon were selected to run in config.json! Please select!")
 
 
     def get_arguments(self):
-        ''' Get arguments from src/config.json 
+        ''' Get arguments from src/config.json and store in self.config 
 
         Inputs: None
 
-        Outputs: (dict) representing src/config.json
+        Outputs: None
         '''
-
         logging.debug("CHIP.get_arguments( )")
 
         with open("src/config.json", "r") as f:
@@ -508,7 +536,101 @@ class CHIP:
 
         Output: None
         '''
-        pass
+        logging.info("CHIP.load_the_cannon( )") 
+
+        self.random_seed = self.config["The Cannon"]["random seed"]["val"]
+
+        interpolated_dir_path = os.path.join(self.data_dir_path, "inter")
+
+        # Load wavelength solution
+        self.wl_solution = np.load( os.path.join( interpolated_dir_path , "wl.npy") )
+
+        # load spectra 
+        # Note: the key is hiresid instead of filename 
+        cross_match_array = pd.read_csv( os.path.join( self.data_dir_path,"HIRES_Filename_snr.csv"))["HIRESid",'FILENAME'].to_numpy()
+        for hiresid, filename in cross_match_array:
+            spec_path = os.path.join( interpolated_dir_path, filename + "_spec.npy" )
+            ivar_path = os.path.join( interpolated_dir_path, filename + "_ivar.npy" )
+            if os.path.exists( spec_path ):
+                if os.path.exists( ivar_path ):
+                    self.spectraDic[hiresid] = np.load(spec_path)
+                    self.ivarDic[hiresid]    = np.load(ivar_path)
+                else:
+                    logging.info(f"{filename} does not what an ivar in {interpolated_dir_path}")
+            else:
+                logging.info(f"{filename} does not what an spectrum in {interpolated_dir_path}")
+        
+        logging.info(f"A total of {len(self.spectraDic)} stars were loaded.")
+
+        # Load parameters 
+        parameters = ["HIRESID"] + self.config["The Cannon"]["stellar parameters"]["val"]
+        parameters_df = pd.read_csv("data/spocs/stellar_parameters.csv")[ parameters ]
+        # Extract only the stars that were preprocessed 
+        self.parameters_df = parameters_df[parameters_df["HIRESID"].isin( cross_match_array[:,0] )]
+
+        # TODO: # Load masks 
+        # self.masks = self.config["The Cannon"]["masks"]["val"]
+        # for i in range(len(self.masks)):
+        #     mask_name = self.masks[i][0]
+        #     mask_path = self.masks[i][1]
+        #     if os.path.exists(mask_path):
+        #         wl,mask = np.load(mask_path,unpack=True)
+        #         trimming_mask = np.isin(self.wl_solution, wl)
+                
+
+
+        
+    def cannon_splits(self):
+        ''' Apply test and validation splits to the data
+        
+        Input: None
+
+        Output: None
+        '''
+        
+        # Split the parameters into a training set, a test set, and a validation set
+        test_frac = self.config["The Cannon"]["train test split"]["val"]
+        self.parameter_train, self.parameter_test = train_test_split(self.parameters_df, test_size = test_frac, random_state= self.random_seed)
+
+        # TODO: If not used, remove Validation 
+        #  "train validation split" :{
+        #      "val": 0.2,
+        #      "description": "what fraction of the data set do you want to use for validation during training (ex: 0.2, 80% of the data set will be used for training, and 20% will be used for testing the best model)"
+        #  },
+        # vali_frac = self.config["The Cannon"]["train validation split"]["val"]
+        # self.parameter_train, self.parameter_validation = train_test_split(self.parameter_train, test_size = vali_frac, random_state= self.random_seed)
+
+        # Split the spectra and ivars 
+        stars_in_test = [name for name in self.parameter_test["HIRESID"]]
+        # TODO: If not used, remove Validation 
+        # stars_in_validation = [name for name in self.parameter_validation["HIRESID"]]
+        stars_in_train = [name for name in self.parameter_train["HIRESID"]]
+
+        self.test_spectra = np.vstack([ self.spectraDic[name] for name in  stars_in_test ])
+        self.test_ivar = np.vstack([ self.ivarDic[name] for name in  stars_in_test ])
+        # TODO: If not used, remove Validation 
+        # self.validation_spectra = np.vstack([ self.spectraDic[name] for name in  stars_in_validation ])
+        # self.validation_ivar = np.vstack([ self.ivarDic[name] for name in  stars_in_validation ])
+        self.train_spectra = np.vstack([ self.spectraDic[name] for name in  stars_in_train ])
+        self.train_ivar = np.vstack([ self.ivarDic[name] for name in  stars_in_train ])
+
+        # No longer needed 
+        del self.spectraDic
+        del self.ivarDic
+
+
+
+        
+
+
+
+
+
+        
+
+
+        
+
         
 
 
