@@ -14,7 +14,7 @@ from hiresprv.idldriver import Idldriver
 from joblib import Parallel, delayed 
 from PyAstronomy import pyasl
 from sklearn.model_selection import train_test_split
-from TheCannon import model 
+from sklearn.preprocessing import StandardScaler
 
 
 
@@ -75,9 +75,8 @@ class CHIP:
             # random seed _ testing fraction _ validation fraction _ cost function name (spaces filled with -)
             rand_seed = self.config["The Cannon"]["random seed"]["val"]
             test_frac = self.config["The Cannon"]["train test split"]["val"]
-            vali_frac = self.config["The Cannon"]["train valid split"]["val"]
             cost_fun  = self.config["The Cannon"]["cost function"]["name"].replace(" ", "-")
-            semi_unique_subdir = f"{rand_seed}_{test_frac}_{vali_frac}_{cost_fun}"
+            semi_unique_subdir = f"{rand_seed}_{test_frac}_{cost_fun}"
             
             self.storage_path = os.path.join( self.data_dir_path, "cannon_results", semi_unique_subdir )
             
@@ -547,7 +546,7 @@ class CHIP:
 
         # load spectra 
         # Note: the key is hiresid instead of filename 
-        cross_match_array = pd.read_csv( os.path.join( self.data_dir_path,"HIRES_Filename_snr.csv"))["HIRESid",'FILENAME'].to_numpy()
+        cross_match_array = pd.read_csv( os.path.join( self.data_dir_path,"HIRES_Filename_snr.csv"))[["HIRESid",'FILENAME']].to_numpy()
         for hiresid, filename in cross_match_array:
             spec_path = os.path.join( interpolated_dir_path, filename + "_spec.npy" )
             ivar_path = os.path.join( interpolated_dir_path, filename + "_ivar.npy" )
@@ -563,10 +562,22 @@ class CHIP:
         logging.info(f"A total of {len(self.spectraDic)} stars were loaded.")
 
         # Load parameters 
-        parameters = ["HIRESID"] + self.config["The Cannon"]["stellar parameters"]["val"]
-        parameters_df = pd.read_csv("data/spocs/stellar_parameters.csv")[ parameters ]
+        parameters_list = self.config["The Cannon"]["stellar parameters"]["val"]
+        hiresid_parameters_list = ["HIRESID"] + parameters_list
+        self.parameters_df = pd.read_csv("data/spocs/stellar_parameters.csv")[ hiresid_parameters_list ]
         # Extract only the stars that were preprocessed 
-        self.parameters_df = parameters_df[parameters_df["HIRESID"].isin( cross_match_array[:,0] )]
+        self.parameters_df = self.parameters_df[self.parameters_df["HIRESID"].isin( cross_match_array[:,0] )]
+
+        logging.info(self.parameters_df)
+        # Create a StandardScaler object
+        self.parameters_scaler = StandardScaler()
+        # Fit the scaler to the selected columns and transform the selected columns
+        parameters_transformed = self.parameters_scaler.fit_transform( self.parameters_df[parameters_list] )
+        # change values in df 
+        self.parameters_df[parameters_list] = parameters_transformed
+        
+        logging.info( "scaled features\n" + self.parameters_df.to_string() )
+
 
         # TODO: # Load masks 
         # self.masks = self.config["The Cannon"]["masks"]["val"]
@@ -576,6 +587,13 @@ class CHIP:
         #     if os.path.exists(mask_path):
         #         wl,mask = np.load(mask_path,unpack=True)
         #         trimming_mask = np.isin(self.wl_solution, wl)
+
+
+        def gridsearchcv(self):
+            '''
+            
+            '''
+            pass
                 
 
 
@@ -592,25 +610,12 @@ class CHIP:
         test_frac = self.config["The Cannon"]["train test split"]["val"]
         self.parameter_train, self.parameter_test = train_test_split(self.parameters_df, test_size = test_frac, random_state= self.random_seed)
 
-        # TODO: If not used, remove Validation 
-        #  "train validation split" :{
-        #      "val": 0.2,
-        #      "description": "what fraction of the data set do you want to use for validation during training (ex: 0.2, 80% of the data set will be used for training, and 20% will be used for testing the best model)"
-        #  },
-        # vali_frac = self.config["The Cannon"]["train validation split"]["val"]
-        # self.parameter_train, self.parameter_validation = train_test_split(self.parameter_train, test_size = vali_frac, random_state= self.random_seed)
-
         # Split the spectra and ivars 
         stars_in_test = [name for name in self.parameter_test["HIRESID"]]
-        # TODO: If not used, remove Validation 
-        # stars_in_validation = [name for name in self.parameter_validation["HIRESID"]]
         stars_in_train = [name for name in self.parameter_train["HIRESID"]]
 
         self.test_spectra = np.vstack([ self.spectraDic[name] for name in  stars_in_test ])
         self.test_ivar = np.vstack([ self.ivarDic[name] for name in  stars_in_test ])
-        # TODO: If not used, remove Validation 
-        # self.validation_spectra = np.vstack([ self.spectraDic[name] for name in  stars_in_validation ])
-        # self.validation_ivar = np.vstack([ self.ivarDic[name] for name in  stars_in_validation ])
         self.train_spectra = np.vstack([ self.spectraDic[name] for name in  stars_in_train ])
         self.train_ivar = np.vstack([ self.ivarDic[name] for name in  stars_in_train ])
 
@@ -619,17 +624,6 @@ class CHIP:
         del self.ivarDic
 
 
-
-        
-
-
-
-
-
-        
-
-
-        
 
         
 
@@ -651,9 +645,12 @@ if __name__ == "__main__":
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
+    chip = CHIP()
+    chip.run()
+
     try:
-        chip = CHIP()   
-        chip.run()
+           
+        pass
 
     except Exception as e:
         logging.error(e) 
@@ -663,8 +660,10 @@ if __name__ == "__main__":
         log_filename = os.path.basename(log_filepath)
         # Shutdown logging so the file can be put in the storage location
         logging.shutdown()
-        os.rename( log_filepath, 
-                  os.path.join( chip.storage_path ,log_filename) )
+
+        # TODO: Undo Comments below
+        # os.rename( log_filepath, 
+        #           os.path.join( chip.storage_path ,log_filename) )
 
 
     

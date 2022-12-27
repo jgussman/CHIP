@@ -18,6 +18,8 @@
 [ ] Refactor TheCannonCHIP
 
     [ ] Use mini-batch
+
+    [ ] Use k-fold cv
     
 [ ] Create DockerImage for reproducability
 
