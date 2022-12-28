@@ -64,8 +64,18 @@
         "masks" : {
             "val" : [["Iodine","data/constants/masks/by_eye_iodine_mask.npy"], ["None",false]],
             "description" : "List of masks to apply to all stars; for example: [['Name of Mask','file path to mask'],...,['None',False]]; shape of mask = (data/spocs/wl_solution.npy.shape[0],)"
+        },
+        
+        "kfolds" : {
+            "val" : 5,
+            "description" : "number of folds for kfold cross validation"
+        },
 
+        "batch size" : {
+            "val" : 32,
+            "description" : "number of batches to split the training set into for mini-batch training"
         }
+        
  
     }
 

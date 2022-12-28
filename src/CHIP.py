@@ -13,8 +13,10 @@ from hiresprv.download import Download
 from hiresprv.idldriver import Idldriver
 from joblib import Parallel, delayed 
 from PyAstronomy import pyasl
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.preprocessing import StandardScaler
+from TheCannon import model
+
 
 
 
@@ -578,6 +580,8 @@ class CHIP:
         
         logging.info( "scaled features\n" + self.parameters_df.to_string() )
 
+        self.cannon_splits(self.parameters_df)
+
 
         # TODO: # Load masks 
         # self.masks = self.config["The Cannon"]["masks"]["val"]
@@ -589,26 +593,53 @@ class CHIP:
         #         trimming_mask = np.isin(self.wl_solution, wl)
 
 
-        def gridsearchcv(self):
-            '''
-            
-            '''
-            pass
-                
 
-
+    def evaluate_model(self,X,y):
+        '''
         
-    def cannon_splits(self):
-        ''' Apply test and validation splits to the data
+        '''
+        pass
+
+    def train_model(self, num_folds,batch_size, poly_order ):
+        '''
+
+        Input: num_folds (int) : number of folds for kfold cross validation
+               batch_size (int) : number of batches to split the training set into for mini-batch training
+               poly_order (int) : A positive int, tells the model what degree polynomial to fit
+        
+        Output: None
+        '''
+        # Initialize The Cannon model 
+        cannon_model = self.initialize_model(poly_order = poly_order)
+        
+        
+    @staticmethod
+    def initialize_model(poly_order = 1):
+        ''' Initialize The Cannon Model
+
+        Input: poly_order (int) : A positive int, tells the model what degree polynomial to fit
+
+        Output: TheCannon.model.CannonModel object 
+        '''
+
+        model = model.CannonModel( order = poly_order, useErrors=False )
+        
+        return model 
+
+
+
+    def cannon_splits(self, parameters_df):
+        ''' Apply test and validation splits to the data. This must be ran after self.parameters_df is created.
         
         Input: None
 
         Output: None
         '''
-        
+        logging.debug("CHIP.cannon_splits( )")
+
         # Split the parameters into a training set, a test set, and a validation set
         test_frac = self.config["The Cannon"]["train test split"]["val"]
-        self.parameter_train, self.parameter_test = train_test_split(self.parameters_df, test_size = test_frac, random_state= self.random_seed)
+        self.parameter_train, self.parameter_test = train_test_split(parameters_df, test_size = test_frac, random_state= self.random_seed)
 
         # Split the spectra and ivars 
         stars_in_test = [name for name in self.parameter_test["HIRESID"]]
@@ -623,13 +654,15 @@ class CHIP:
         del self.spectraDic
         del self.ivarDic
 
+        # Create a KFold object for preforming k-fold cross validation  
+        num_folds = self.config["The Cannon"]["kfolds"]["val"]
+        kf = KFold(n_splits=num_folds, shuffle=True, random_state=self.random_seed)
+        self.kfold_train_validation_splits = np.vstack(kf.split(self.test_spectra))
+        logging.info("kflod splits" + str(self.kfold_train_validation_splits))
+
 
 
         
-
-
-
-
 
 
 if __name__ == "__main__":
