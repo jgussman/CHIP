@@ -5,13 +5,8 @@
         "description": "Arguments for preprocessing pipeline",
     
         "run" : { 
-            "val": false,
-            "description": "Do you want to run CHIP?"
-        },
-
-        "logging" : { 
             "val": true,
-            "description": "Would you like to enable logging?"
+            "description": "Do you want to run CHIP?"
         },
         
         "cross_match_stars" : {
@@ -36,7 +31,7 @@
         "description": "Arguments for The Cannon",
 
         "run" : { 
-            "val": "2022-12-24_06-57-37",
+            "val": false,
             "description": "If you want to run The Cannon set val to the name of the dir inside data/chip_runs you want to use (ex: 2022-12-24_06-57-37). Otherwise set to false."
         },
 
@@ -67,7 +62,7 @@
         },
         
         "kfolds" : {
-            "val" : 5,
+            "val" : 2,
             "description" : "number of folds for kfold cross validation"
         },
 
