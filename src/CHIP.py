@@ -310,7 +310,7 @@ class CHIP:
         del self.state
 
         end_time = time.perf_counter()
-        logging.info(f"It took CHIP.download_spectra, {end_time - start_time} to finish!")
+        logging.info(f"It took CHIP.download_spectra, {end_time - start_time} seconds to finish!")
     
 
     def sigma_calculation(self,filename , star_ID):
@@ -380,7 +380,7 @@ class CHIP:
         self.update_removedstars()
         
         end_time = time.perf_counter()
-        logging.info(f"It took CHIP.alpha_normalization, {end_time - start_time} to finish!")
+        logging.info(f"It took CHIP.alpha_normalization, {end_time - start_time} seconds to finish!")
 
 
     def cross_correlate_spectra(self):
@@ -476,7 +476,7 @@ class CHIP:
                 (star_name) for star_name in list(self.spectraDic))
         
         end_time = time.perf_counter()
-        logging.info(f"It took CHIP.cross_correlate_spectra, {end_time - start_time} to finish!")
+        logging.info(f"It took CHIP.cross_correlate_spectra, {end_time - start_time} seconds to finish!")
 
 
     def interpolate(self):
@@ -531,7 +531,7 @@ class CHIP:
             np.save( ivar_path, self.ivarDic[star_name][mask]    )
 
         end_time = time.perf_counter()
-        logging.info(f"It took CHIP.interpolate, {end_time - start_time} to finish!")
+        logging.info(f"It took CHIP.interpolate, {end_time - start_time} seconds to finish!")
 
 
     def load_the_cannon(self):
