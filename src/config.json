@@ -5,12 +5,12 @@
         "description": "Arguments for preprocessing pipeline",
     
         "run" : { 
-            "val": true,
+            "val": false,
             "description": "Do you want to run CHIP?"
         },
         
         "cross_match_stars" : {
-            "val": "data/spocs/testStars2.txt",
+            "val": "data/spocs/testStars.txt",
             "description": "../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt, ../SPOCSdata/testStars.txt Cross Match Names file path ---> this txt file must have two columns seperated by a space with headers, one of the columns will the names of the stars in the catalogue you want. The other column must have the column name as 'HIRES' and contain the names of the HIRES identification for the stars."
         },
 
@@ -31,7 +31,7 @@
         "description": "Arguments for The Cannon",
 
         "run" : { 
-            "val": false,
+            "val": "2022-12-28_22-13-57",
             "description": "If you want to run The Cannon set val to the name of the dir inside data/chip_runs you want to use (ex: 2022-12-24_06-57-37). Otherwise set to false."
         },
 
@@ -52,7 +52,7 @@
 
         "cost function" : {
             "name": "Mean Error",
-            "function" : "lambda true_array,predicted_array:  np.mean(true_array - predicted_array)",
+            "function" : "lambda true_array,predicted_array:  np.mean( true_array - predicted_array )",
             "description" : "A lambda function and associated name of function, for computing the cost of a model."
         },
 
@@ -69,7 +69,14 @@
         "batch size" : {
             "val" : 32,
             "description" : "number of batches to split the training set into for mini-batch training"
+        },
+
+        "poly orders" : {
+            "val" : [1,2],
+            "description" : "What degree polynomials do you want The Cannon to try to fit to the data? ex: [1,2]"
         }
+
+
         
  
     }

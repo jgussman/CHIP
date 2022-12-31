@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import time 
 
+
 from alpha_shapes import contfit_alpha_hull
 from astropy.io import fits
 from hiresprv.auth import login
@@ -15,7 +16,9 @@ from joblib import Parallel, delayed
 from PyAstronomy import pyasl
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.preprocessing import StandardScaler
+from TheCannon import dataset
 from TheCannon import model
+
 
 
 
@@ -530,6 +533,7 @@ class CHIP:
         end_time = time.perf_counter()
         logging.info(f"It took CHIP.interpolate, {end_time - start_time} to finish!")
 
+
     def load_the_cannon(self):
         ''' Load in the data The Cannon will use. 
         
@@ -564,24 +568,26 @@ class CHIP:
         logging.info(f"A total of {len(self.spectraDic)} stars were loaded.")
 
         # Load parameters 
-        parameters_list = self.config["The Cannon"]["stellar parameters"]["val"]
-        hiresid_parameters_list = ["HIRESID"] + parameters_list
+        self.parameters_list = self.config["The Cannon"]["stellar parameters"]["val"]
+        hiresid_parameters_list = ["HIRESID"] + self.parameters_list
         self.parameters_df = pd.read_csv("data/spocs/stellar_parameters.csv")[ hiresid_parameters_list ]
         # Extract only the stars that were preprocessed 
         self.parameters_df = self.parameters_df[self.parameters_df["HIRESID"].isin( cross_match_array[:,0] )]
 
-        logging.info(self.parameters_df)
+        logging.info("before scaling\n" + self.parameters_df.to_string())
         # Create a StandardScaler object
         self.parameters_scaler = StandardScaler()
         # Fit the scaler to the selected columns and transform the selected columns
-        parameters_transformed = self.parameters_scaler.fit_transform( self.parameters_df[parameters_list] )
+        parameters_transformed = self.parameters_scaler.fit_transform( self.parameters_df[self.parameters_list] )
         # change values in df 
-        self.parameters_df[parameters_list] = parameters_transformed
-        
+        self.parameters_df[self.parameters_list] = parameters_transformed
+
         logging.info( "scaled features\n" + self.parameters_df.to_string() )
 
         self.cannon_splits(self.parameters_df)
 
+        # load cost function 
+        self.cost_function = eval(self.config["The Cannon"]["cost function"]["function"])
 
         # TODO: # Load masks 
         # self.masks = self.config["The Cannon"]["masks"]["val"]
@@ -591,27 +597,94 @@ class CHIP:
         #     if os.path.exists(mask_path):
         #         wl,mask = np.load(mask_path,unpack=True)
         #         trimming_mask = np.isin(self.wl_solution, wl)
+        
+        # TODO: DELETE
+        self.train_model(4,1)
 
 
 
-    def evaluate_model(self,X,y):
-        '''
+    def evaluate_model(self,md,ds,true_labels):
+        ''' Evaluate how well a model was trained.
+
+        Input: md (TheCannon.model.CannonModel) - 
+               ds (TheCannon.dataset.Dataset) -
+               true_labels (np.array((M,))) - true values for the corresponds inferred labels 
         
         '''
-        pass
+        label_errors = md.infer_labels(ds)
+        infered_labels = ds.test_label_vals
 
-    def train_model(self, num_folds,batch_size, poly_order ):
+        return self.cost_function(true_labels, infered_labels)
+        
+
+    def split_data(self,X_indecies, y_indecies):
+        ''' Split data to be put in TheCannon.dataset.Dataset
+
+        Input: X_indecies (np.array((N,))) - indecies to be used for the training set
+               y_indecies (np.array((M,))) - indecies to be used for the testing set
+        
+        Output: training id, training spectra, training ivar, training parameters, testing id, testing spectra, testing ivar, testing parameters
         '''
+        # np.array( array , dtype=np.float) is necessary, otherwise you would recieve the following type error 
+        # TypeError: No loop matching the specified signature and casting was found for ufunc solve1
+        X_id = self.train_id[X_indecies]
+        X_spec = np.array(self.train_spectra[X_indecies], dtype=np.float)
+        X_ivar = np.array(self.train_ivar[X_indecies], dtype=np.float)
+        # Remove 0th column that contains HIRES IDs
+        X_parameters = np.array(self.train_parameter.to_numpy()[X_indecies][:,1:], dtype=np.float)
 
-        Input: num_folds (int) : number of folds for kfold cross validation
-               batch_size (int) : number of batches to split the training set into for mini-batch training
+        y_id = self.train_id[y_indecies]
+        y_spec = np.array(self.train_spectra[y_indecies], dtype=np.float)
+        y_ivar = np.array(self.train_ivar[y_indecies], dtype=np.float)
+        # Remove 0th column that contains HIRES IDs
+        y_parameters = np.array(self.train_parameter.to_numpy()[y_indecies][:,1:], dtype=np.float)
+
+        return X_id, X_spec, X_ivar, X_parameters, y_id, y_spec, y_ivar, y_parameters
+
+
+    def train_model(self,batch_size, poly_order ):
+        ''' Train a Cannon model using mini-batch and k-fold cv
+
+        Input: batch_size (int) : number of batches to split the training set into for mini-batch training
                poly_order (int) : A positive int, tells the model what degree polynomial to fit
         
-        Output: None
+        Output: The mean evaluation score 
         '''
+        # Store the evaluations
+        evaluation_list = []
         # Initialize The Cannon model 
-        cannon_model = self.initialize_model(poly_order = poly_order)
+        for X_i, y_i in self.kfold_train_validation_splits:
+            # Initialize new model
+            cannon_model = self.initialize_model(poly_order = poly_order)
+
+            # Split training and validation
+            X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, y_param = self.split_data(X_i, y_i)
+
+
+            # ds = self.initailize_dataset(self.wl_solution,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, self.parameters_list)
+
+            # # Fit the model on the current mini-batch
+            # cannon_model.fit(ds)
+
+            # Create mini-batches of the data
+            num_batches = int(np.ceil(X_spec.shape[0] / batch_size))
+
+            for i in range(num_batches):
+                # Get the start and end indices of the current mini-batch
+                start = i * batch_size
+                end = min((i + 1) * batch_size, X_spec.shape[0])
+                
+                ds = self.initailize_dataset(self.wl_solution,X_id[start:end], X_spec[start:end], X_ivar[start:end], X_param[start:end], y_id, y_spec, y_ivar, self.parameters_list)
+
+                # Fit the model on the current mini-batch
+                cannon_model.fit(ds)
+                
+
+            # Evaluate model
+            evaluation_list.append(self.evaluate_model(cannon_model,ds,y_param))
         
+        return np.mean(evaluation_list)
+
         
     @staticmethod
     def initialize_model(poly_order = 1):
@@ -622,10 +695,34 @@ class CHIP:
         Output: TheCannon.model.CannonModel object 
         '''
 
-        model = model.CannonModel( order = poly_order, useErrors=False )
+        md = model.CannonModel( order = poly_order, useErrors=False )
         
-        return model 
+        return md 
 
+
+    @staticmethod
+    def initailize_dataset(wl_sol, X_id, X_flux, X_ivar, X_parameter, y_id, y_flux, y_ivar, parameters_names ):
+        ''' Put data into data structure The Cannon will train on.
+
+        Input: wl_sol (np.array((N,))) - wavelength solution for all spectra
+               X_id (np.array((M,))) - HIRES identifers that correspond to the rows in X_flux, X_ivar, and X_parameter
+               X_flux (np.array((M,N))) - flux for each star in X_id 
+               X_ivar (np.array((M,N))) - ivar for each star in X_id 
+               X_parameter (np.array((M,P))) - contains all the parameters for each star in X_id (in the exact same order)
+               y_id (np.array((V,))) - HIRES identifers that correspond to the rows in y_flux, y_ivar
+               y_flux (np.array((V,N))) - flux for each star in y_id 
+               y_ivar (np.array((V,N))) - ivar for each star in y_id 
+               parameters_names (np.array((P,))) - column names of X_parameter and y_parameter
+              
+        Output: TheCannon.dataset.Dataset object 
+        '''
+
+        ds = dataset.Dataset(wl_sol, X_id, X_flux, X_ivar, X_parameter, y_id, y_flux, y_ivar) 
+        ds.set_label_names(parameters_names) 
+        # wl ranges can be optimized for specific echelle ranges
+        ds.ranges= [[np.min(wl_sol),np.max(wl_sol)]]
+        
+        return ds
 
 
     def cannon_splits(self, parameters_df):
@@ -639,17 +736,20 @@ class CHIP:
 
         # Split the parameters into a training set, a test set, and a validation set
         test_frac = self.config["The Cannon"]["train test split"]["val"]
-        self.parameter_train, self.parameter_test = train_test_split(parameters_df, test_size = test_frac, random_state= self.random_seed)
+        self.train_parameter, self.test_parameter = train_test_split(parameters_df, test_size = test_frac, random_state= self.random_seed)
 
         # Split the spectra and ivars 
-        stars_in_test = [name for name in self.parameter_test["HIRESID"]]
-        stars_in_train = [name for name in self.parameter_train["HIRESID"]]
+        stars_in_test = [name for name in self.test_parameter["HIRESID"]]
+        stars_in_train = [name for name in self.train_parameter["HIRESID"]]
 
         self.test_spectra = np.vstack([ self.spectraDic[name] for name in  stars_in_test ])
         self.test_ivar = np.vstack([ self.ivarDic[name] for name in  stars_in_test ])
+        self.test_id = np.array([name for name in  stars_in_test if name in self.spectraDic])
         self.train_spectra = np.vstack([ self.spectraDic[name] for name in  stars_in_train ])
         self.train_ivar = np.vstack([ self.ivarDic[name] for name in  stars_in_train ])
+        self.train_id = np.array([name for name in  stars_in_train if name in self.spectraDic])
 
+        logging.info("train_id" + str(self.train_id))
         # No longer needed 
         del self.spectraDic
         del self.ivarDic
@@ -657,13 +757,17 @@ class CHIP:
         # Create a KFold object for preforming k-fold cross validation  
         num_folds = self.config["The Cannon"]["kfolds"]["val"]
         kf = KFold(n_splits=num_folds, shuffle=True, random_state=self.random_seed)
+        # So repeated call doesn't need to be made to kf every time. 
         self.kfold_train_validation_splits = np.vstack(kf.split(self.test_spectra))
         logging.info("kflod splits" + str(self.kfold_train_validation_splits))
+
+        logging.info(self.train_id[self.kfold_train_validation_splits[0][0]])
+
+
 
 
 
         
-
 
 if __name__ == "__main__":
 
