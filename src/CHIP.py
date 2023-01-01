@@ -252,7 +252,12 @@ class CHIP:
                 logging.debug(f"{star_ID} has no RV observations")
                 self.removed_stars["no RV observations"].append(star_ID) 
                 continue 
-            else:   
+            elif not ("FILENAME" in obs_df.columns):
+                logging.info(f"{star_ID}'s querry doesn't have a 'FILENAME' column!")
+                self.removed_stars["no RV observations"].append(star_ID) 
+                continue
+            else:
+
                 logging.debug(f"RV Observation Filenames: {obs_df['FILENAME'] }")
 
                 best_SNR = 0
