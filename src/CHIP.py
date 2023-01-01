@@ -239,67 +239,70 @@ class CHIP:
         self.dataSpectra = Download('data/prv.cookies', spectra_download_location)
                                   
         for star_ID in hires_names_array:
-            logging.debug(f"Finding highest SNR spectrum for {star_ID}")
-                
-            
-            # SQL query to find all the RV observations of one particular star
-            search_string = f"select OBTYPE,FILENAME from FILES where TARGET like '{star_ID}' and OBTYPE like 'RV observation';"
-            url = self.state.search(sql=search_string)
-            obs_df = pd.read_html(url, header=0)[0]
-
-            # Check if there are any RV Observations 
-            if obs_df.empty: 
-                logging.debug(f"{star_ID} has no RV observations")
-                self.removed_stars["no RV observations"].append(star_ID) 
-                continue 
-            elif not ("FILENAME" in obs_df.columns):
-                logging.info(f"{star_ID}'s querry doesn't have a 'FILENAME' column!")
-                self.removed_stars["no RV observations"].append(star_ID) 
-                continue
-            else:
-
-                logging.debug(f"RV Observation Filenames: {obs_df['FILENAME'] }")
-
-                best_SNR = 0
-                best_SNR_filename = False 
-
-                for filename in obs_df["FILENAME"]:
-                    temp_SNR = self.download_spectrum(filename)
+                try:
+                    logging.debug(f"Finding highest SNR spectrum for {star_ID}")
+                        
                     
+                    # SQL query to find all the RV observations of one particular star
+                    search_string = f"select OBTYPE,FILENAME from FILES where TARGET like '{star_ID}' and OBTYPE like 'RV observation';"
+                    url = self.state.search(sql=search_string)
+                    obs_df = pd.read_html(url, header=0)[0]
 
-                    # Check if the SNR is the highest out of 
-                    # all the star's previous spectras 
-                    if best_SNR < temp_SNR:
-                        # Since this spectrum is not longer the best, we will delete it
-                        delete_spectrum_filename = best_SNR_filename 
-
-                        best_SNR = temp_SNR
-                        best_SNR_filename = filename 
+                    # Check if there are any RV Observations 
+                    if obs_df.empty or not ("FILENAME" in obs_df.columns): 
+                        logging.debug(f"{star_ID} has no RV observations")
+                        self.removed_stars["no RV observations"].append(star_ID) 
+                        continue 
                     else:
-                        delete_spectrum_filename = filename 
 
-                    # Delete unused spectrum
-                    # Will not trigger in the intial case
-                    if delete_spectrum_filename: 
-                        self.delete_spectrum(delete_spectrum_filename)
+                        logging.debug(f"RV Observation Filenames: {obs_df['FILENAME'] }")
 
-                if best_SNR < 100: 
-                    logging.debug(f"{star_ID}'s best spectrum had an SNR lower than 100. Thus it was removed.")
+                        best_SNR = 0
+                        best_SNR_filename = False 
 
-                    self.removed_stars["SNR < 100"].append(star_ID)
+                        for filename in obs_df["FILENAME"]:
+                            temp_SNR = self.download_spectrum(filename)
+                            
 
-                else:
-                    # Save the Best Spectrum
-                    self.spectraDic[best_SNR_filename] = self.download_spectrum(best_SNR_filename, 
-                                                                                SNR=False)
-                    
-                    logging.debug(f"{star_ID}'s best SNR spectrum came from {best_SNR_filename} with an SNR={best_SNR}")
-                    hiresID_fileName_snr_dic["HIRESid"].append(star_ID)
-                    hiresID_fileName_snr_dic["FILENAME"].append(best_SNR_filename)
-                    hiresID_fileName_snr_dic["SNR"].append(best_SNR)
-                
-                    # Calculate ivar
-                    self.sigma_calculation(best_SNR_filename , star_ID)
+                            # Check if the SNR is the highest out of 
+                            # all the star's previous spectras 
+                            if best_SNR < temp_SNR:
+                                # Since this spectrum is not longer the best, we will delete it
+                                delete_spectrum_filename = best_SNR_filename 
+
+                                best_SNR = temp_SNR
+                                best_SNR_filename = filename 
+                            else:
+                                delete_spectrum_filename = filename 
+
+                            # Delete unused spectrum
+                            # Will not trigger in the intial case
+                            if delete_spectrum_filename: 
+                                self.delete_spectrum(delete_spectrum_filename)
+
+                        if best_SNR < 100: 
+                            logging.debug(f"{star_ID}'s best spectrum had an SNR lower than 100. Thus it was removed.")
+
+                            self.removed_stars["SNR < 100"].append(star_ID)
+
+                        else:
+                            # Save the Best Spectrum
+                            self.spectraDic[best_SNR_filename] = self.download_spectrum(best_SNR_filename, 
+                                                                                        SNR=False)
+                            
+                            logging.debug(f"{star_ID}'s best SNR spectrum came from {best_SNR_filename} with an SNR={best_SNR}")
+                            hiresID_fileName_snr_dic["HIRESid"].append(star_ID)
+                            hiresID_fileName_snr_dic["FILENAME"].append(best_SNR_filename)
+                            hiresID_fileName_snr_dic["SNR"].append(best_SNR)
+                        
+                            # Calculate ivar
+                            self.sigma_calculation(best_SNR_filename , star_ID)
+                except:
+                    logging.debug(f"Something went wrong with {star_ID} ")
+                    self.removed_stars["No Clue"].append(star_ID) 
+                    continue 
+
+
 
 
         # Save SNR meta data in csv file 
