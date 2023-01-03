@@ -99,14 +99,60 @@ class CHIP:
         if self.config["CHIP"]["run"]["val"]:
             logging.info(f"CHIP {self.chip_version}")
 
-            self.download_spectra()
+            if isinstance(self.config["CHIP"]["run"]["val"],bool):
 
-            self.alpha_normalization()
+                self.download_spectra()
 
-            self.cross_correlate_spectra()
+                self.alpha_normalization()
 
-            self.interpolate()
-        
+                self.cross_correlate_spectra()
+
+                self.interpolate()
+
+            else:
+                past_run, data_folder = self.config["CHIP"]["run"]["val"][0], self.config["CHIP"]["run"]["val"][1]
+                logging.info(f"Using the past run {past_run}'s {data_folder}")
+
+                past_run_path = os.path.join(os.path.dirname(self.storage_path), past_run)
+
+                if os.path.exists(past_run_path):
+                    
+                    data_folder_path = os.path.join(past_run_path,data_folder)
+                    if os.path.exists(data_folder_path):
+                        if "rv_obs" == data_folder:
+                            self.hires_filename_snr_df = pd.read_csv( os.path.join(past_run_path ,"HIRES_Filename_snr.csv"))
+                            self.hires_filename_snr_df.to_csv( os.path.join(self.storage_path ,"HIRES_Filename_snr.csv"),
+                                                            index_label=False,
+                                                            index=False)
+
+                            for _, row in self.hires_filename_snr_df.iterrows():
+                                # Save the Best Spectrum
+                                star_id = row["HIRESid"]
+                                filename = row["FILENAME"]
+                                self.spectraDic[filename] = self.download_spectrum(filename, 
+                                                                                    SNR=False,
+                                                                                    past_rv_obs_path=data_folder_path)
+                                print("Got here")
+                                # Calculate ivar
+                                self.sigma_calculation(filename , star_id)
+
+                            # Continue with normal operations 
+                            self.alpha_normalization()
+                            self.cross_correlate_spectra()
+                            self.interpolate()
+
+                        else: 
+                            logging.error(f"{data_folder} is not currently a supported starting location for using past CHIP runs")
+
+
+
+
+                    else:
+                        logging.error(f"The data folder {data_folder} in {past_run} does not exist! We are looking at {data_folder_path}")
+                else:
+                    logging.error(f"The past run {past_run} does not exist! We are looking at {past_run_path}")
+                    
+    
         elif self.config["The Cannon"]["run"]["val"]:
             logging.info(f"The Cannon {self.thecannon_version}")
 
@@ -164,36 +210,43 @@ class CHIP:
             pass 
 
 
-    def download_spectrum(self,filename,SNR = True):
+    def download_spectrum(self,filename,SNR = True, past_rv_obs_path = False):
             '''Download Individual Spectrum and ivar 
 
             Input: filename (str): HIRES file name of spectrum you want to download
                    SNR (bool): if you want to calculate the SNR of the spectrum 
+                   past_rv_obs_path (str): if you want to load in old rb obs set to rb_obs dir path
 
             Output: None
             '''
-            logging.debug(f"CHIP.download_spectrum( filename={filename}, SNR={SNR} )")
+            logging.debug(f"CHIP.download_spectrum( filename={filename}, SNR={SNR}, past_rv_obs_path={past_rv_obs_path} )")
             
-            #Download spectra
-            self.dataSpectra.spectrum(filename.replace("r",""))    
-            file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
+            if not past_rv_obs_path:
+                #Download spectra
+                self.dataSpectra.spectrum(filename.replace("r",""))    
+                file_path = os.path.join(self.dataSpectra.localdir, filename + ".fits")
 
-            try: 
-                temp_deblazedFlux = fits.getdata(file_path)
-            except OSError:
-                # There is a problem with the downloaded fits file 
-                return -1
-            
-            if SNR: # Used to find best SNR 
-                SNR = self.calculate_SNR(temp_deblazedFlux)
+                try: 
+                    temp_deblazedFlux = fits.getdata(file_path)
+                except OSError:
+                    # There is a problem with the downloaded fits file 
+                    return -1
+                
+                if SNR: # Used to find best SNR 
+                    SNR = self.calculate_SNR(temp_deblazedFlux)
 
-                # delete Spectrum variable so it can be delete if needed
-                del temp_deblazedFlux 
-                return SNR
+                    # delete Spectrum variable so it can be delete if needed
+                    del temp_deblazedFlux 
+                    return SNR
+                else:
+                    # Trim the left and right sides of each echelle order 
+                    return temp_deblazedFlux[:, self.trim: -self.trim]
             else:
-                # Trim the left and right sides of each echelle order 
+                # Load past data 
+                file_path = os.path.join(past_rv_obs_path, filename + ".fits")
+                temp_deblazedFlux = fits.getdata(file_path)
                 return temp_deblazedFlux[:, self.trim: -self.trim]
-    
+
 
     def update_removedstars(self):
         ''' Helper method to insure removed_stars will be updated properly accross each method.
@@ -301,9 +354,6 @@ class CHIP:
                     logging.debug(f"Something went wrong with {star_ID} ")
                     self.removed_stars["No Clue"].append(star_ID) 
                     continue 
-
-
-
 
         # Save SNR meta data in csv file 
         self.hires_filename_snr_df = pd.DataFrame(hiresID_fileName_snr_dic) 
