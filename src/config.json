@@ -5,12 +5,12 @@
         "description": "Arguments for preprocessing pipeline",
     
         "run" : { 
-            "val": false,
+            "val": true,
             "description": "Do you want to run CHIP?"
         },
         
         "cross_match_stars" : {
-            "val": "data/spocs/testStars.txt",
+            "val": "data/spocs/starnames_crossmatch_SPOCS_NEXSCI.txt",
             "description": "../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt, ../SPOCSdata/testStars.txt Cross Match Names file path ---> this txt file must have two columns seperated by a space with headers, one of the columns will the names of the stars in the catalogue you want. The other column must have the column name as 'HIRES' and contain the names of the HIRES identification for the stars."
         },
 
@@ -20,7 +20,7 @@
         },
 
         "cores" : { 
-            "val": 2,
+            "val": 4,
             "description": "How many cores on your machine would you like to use? -1 for all."
         }
 
