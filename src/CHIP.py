@@ -718,12 +718,6 @@ class CHIP:
             # Split training and validation
             X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, y_param = self.split_data(X_i, y_i)
 
-
-            # ds = self.initailize_dataset(self.wl_solution,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, self.parameters_list)
-
-            # # Fit the model on the current mini-batch
-            # cannon_model.fit(ds)
-
             # Create mini-batches of the data
             num_batches = int(np.ceil(X_spec.shape[0] / batch_size))
 

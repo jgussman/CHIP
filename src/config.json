@@ -5,13 +5,8 @@
         "description": "Arguments for preprocessing pipeline",
     
         "run" : { 
-<<<<<<< HEAD
-            "val": true,
-            "description": "Do you want to run CHIP?"
-=======
             "val": ["2022-12-28_22-13-57", "rv_obs"],
             "description": "Do you want to run CHIP? If you want to use data from a past run, you need to specify the run's name and what data you want to use from that folder ex: [2022-12-28_22-13-57, rv_obs]."
->>>>>>> 98d4f097805f7661e83bdcccb08dc8824ee4ff16
         },
         
         "cross_match_stars" : {
