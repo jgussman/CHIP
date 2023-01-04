@@ -132,7 +132,6 @@ class CHIP:
                                 self.spectraDic[filename] = self.download_spectrum(filename, 
                                                                                     SNR=False,
                                                                                     past_rv_obs_path=data_folder_path)
-                                print("Got here")
                                 # Calculate ivar
                                 self.sigma_calculation(filename , star_id)
 
