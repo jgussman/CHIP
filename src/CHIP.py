@@ -99,6 +99,12 @@ class CHIP:
         if self.config["CHIP"]["run"]["val"]:
             logging.info(f"CHIP {self.chip_version}")
 
+            # Record results 
+            self.removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], 
+                                "SNR < 100":[],"NAN value in spectra":[],
+                                "No Clue":[],"Nan in IVAR":[],
+                                "Normalization error":[]}
+
             if isinstance(self.config["CHIP"]["run"]["val"],bool):
 
                 self.download_spectra()
@@ -142,9 +148,6 @@ class CHIP:
 
                         else: 
                             logging.error(f"{data_folder} is not currently a supported starting location for using past CHIP runs")
-
-
-
 
                     else:
                         logging.error(f"The data folder {data_folder} in {past_run} does not exist! We are looking at {data_folder_path}")
@@ -275,11 +278,6 @@ class CHIP:
         cross_matched_df = pd.read_csv( cross_matched_file_path, sep=" " )
         hires_names_array = cross_matched_df["HIRES"].to_numpy()
 
-        # Record results 
-        self.removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], 
-                              "SNR < 100":[],"NAN value in spectra":[],
-                              "No Clue":[],"Nan in IVAR":[],
-                              "Normalization error":[]}
         hiresID_fileName_snr_dic = {"HIRESid": [],"FILENAME":[],"SNR":[]}  
 
         # Location to save spectra
@@ -707,6 +705,7 @@ class CHIP:
         
         Output: The mean evaluation score 
         '''
+        print("TRAINING MODEL")
         # Store the evaluations
         evaluation_list = []
         # Initialize The Cannon model 
@@ -771,7 +770,8 @@ class CHIP:
         ds = dataset.Dataset(wl_sol, X_id, X_flux, X_ivar, X_parameter, y_id, y_flux, y_ivar) 
         ds.set_label_names(parameters_names) 
         # wl ranges can be optimized for specific echelle ranges
-        ds.ranges= [[np.min(wl_sol),np.max(wl_sol)]]
+        #ds.ranges= [[np.min(wl_sol),np.max(wl_sol)]]
+        ds.ranges= [[np.min(wl_sol),np.min(wl_sol)+20]]
         
         return ds
 
