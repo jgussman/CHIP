@@ -252,6 +252,15 @@ def plot_alpha_shape_fit(wv, spec, alpha_shape, AS_tilde, W_alpha):
 
 def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=False):
 
+
+    # Check if the files have already been compute, if they ahve just true 
+    spec_norm_name = os.path.join(save_dir, '%s_specnorm.npy' %(starname))
+    signma_norm_name = os.path.join(save_dir, '%s_sigmanorm.npy' %(starname))
+
+    if os.path.exists(spec_norm_name) and os.path.exists(signma_norm_name):
+        return
+        
+
     spec_norm, sigma_norm, cfit = AFS_continuum_norm_1star(wv_raw, spec_raw, sigma_raw)
 
 
@@ -261,7 +270,7 @@ def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=Fal
         plt.ylabel('normalized flux')
         plt.tight_layout()
 
-        plt.savefig( os.path.join(save_dir, '%s_specnorm.png' %(starname)), dpi=300)
+        plt.savefig( spec_norm_name, dpi=300)
         plt.clf()
         plt.close()
 
@@ -283,7 +292,7 @@ def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=Fal
         np.save( os.path.join(save_dir, '%s_specnorm_nopeaks.npy' %(starname)), spec_norm_nopeaks)
 
     # Save uncertainty
-    np.save( os.path.join(save_dir, '%s_sigmanorm.npy' %(starname)), sigma_norm)
+    np.save( signma_norm_name, sigma_norm)
     
 
     if plot == True:
