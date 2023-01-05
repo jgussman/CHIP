@@ -145,6 +145,13 @@ class CHIP:
                             self.alpha_normalization()
                             self.cross_correlate_spectra()
                             self.interpolate()
+                        
+                        elif "norm" == data_folder:
+                            # Continue with normal operations 
+                            self.alpha_normalization()
+                            self.cross_correlate_spectra()
+                            self.interpolate()
+
 
                         else: 
                             logging.error(f"{data_folder} is not currently a supported starting location for using past CHIP runs")
