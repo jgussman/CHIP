@@ -133,31 +133,13 @@ class CHIP:
                                         self.storage_path)
 
                         self.hires_filename_snr_df = pd.read_csv( os.path.join(self.storage_path, "HIRES_Filename_snr.csv"))
-                        if "rv_obs" == data_folder:
-                            
-                            for _, row in self.hires_filename_snr_df.iterrows():
-                                # Save the Best Spectrum
-                                star_id = row["HIRESid"]
-                                filename = row["FILENAME"]
-                                self.spectraDic[filename] = self.download_spectrum(filename, 
-                                                                                    SNR=False,
-                                                                                    past_rv_obs_path=data_folder_path)
-                                # Calculate ivar
-                                self.sigma_calculation(filename , star_id)
-
+                        if data_folder in ["rv_obs","norm"]:
+                            self.load_past_rv_obs( os.path.join(self.storage_path,"rv_obs"))
+                    
                             # Continue with normal operations 
                             self.alpha_normalization()
                             self.cross_correlate_spectra()
                             self.interpolate()
-                        
-                        elif "norm" == data_folder:
-                            
-
-                            # Continue with normal operations 
-                            self.alpha_normalization()
-                            self.cross_correlate_spectra()
-                            self.interpolate()
-
 
                         else: 
                             logging.error(f"{data_folder} is not currently a supported starting location for using past CHIP runs")
@@ -176,6 +158,22 @@ class CHIP:
         else:
             logging.error("Neither CHIP or The Cannon were selected to run in config.json! Please select!")
 
+
+    def load_past_rv_obs(self,data_folder_path):
+        ''' Load in past data to continue preprocessing
+
+        Input: data_folder_path (str): File path to rv_obs folder
+        
+        '''
+        for _, row in self.hires_filename_snr_df.iterrows():
+            # Save the Best Spectrum
+            star_id = row["HIRESid"]
+            filename = row["FILENAME"]
+            self.spectraDic[filename] = self.download_spectrum(filename, 
+                                                                SNR=False,
+                                                                past_rv_obs_path=data_folder_path)
+            # Calculate ivar
+            self.sigma_calculation(filename , star_id)
 
     def get_arguments(self):
         ''' Get arguments from src/config.json and store in self.config 
@@ -259,8 +257,12 @@ class CHIP:
             else:
                 # Load past data 
                 file_path = os.path.join(past_rv_obs_path, filename + ".fits")
-                temp_deblazedFlux = fits.getdata(file_path)
-                return temp_deblazedFlux[:, self.trim: -self.trim]
+                if os.path.exists(file_path):
+                    temp_deblazedFlux = fits.getdata(file_path)
+                    return temp_deblazedFlux[:, self.trim: -self.trim]
+                else:
+                    # Star isn't in file location
+                    self.download_spectrum(filename,SNR,past_rv_obs_path = False)
 
 
     def update_removedstars(self):
