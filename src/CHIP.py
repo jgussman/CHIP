@@ -128,6 +128,7 @@ class CHIP:
                     data_folder_path = os.path.join(past_run_path,data_folder)
                     if os.path.exists(data_folder_path):
                         # Transfer all files from past run to new run
+                        shutil.rmtree(self.storage_path)
                         shutil.copytree(past_run_path,
                                         self.storage_path)
 
