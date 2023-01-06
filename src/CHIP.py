@@ -3,6 +3,7 @@ import json
 import os
 import numpy as np
 import pandas as pd
+import shutil
 import time 
 
 
@@ -147,6 +148,10 @@ class CHIP:
                             self.interpolate()
                         
                         elif "norm" == data_folder:
+                            # Transfer norm files 
+                            shutil.copytree(data_folder_path,
+                                           os.path.join(self.storage_path,"norm"))
+
                             # Continue with normal operations 
                             self.alpha_normalization()
                             self.cross_correlate_spectra()
@@ -823,9 +828,6 @@ class CHIP:
 
 
 
-
-
-        
 
 if __name__ == "__main__":
 
