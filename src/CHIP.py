@@ -124,14 +124,16 @@ class CHIP:
 
                 if os.path.exists(past_run_path):
                     
+
                     data_folder_path = os.path.join(past_run_path,data_folder)
                     if os.path.exists(data_folder_path):
-                        if "rv_obs" == data_folder:
-                            self.hires_filename_snr_df = pd.read_csv( os.path.join(past_run_path ,"HIRES_Filename_snr.csv"))
-                            self.hires_filename_snr_df.to_csv( os.path.join(self.storage_path ,"HIRES_Filename_snr.csv"),
-                                                            index_label=False,
-                                                            index=False)
+                        # Transfer all files from past run to new run
+                        shutil.copytree(past_run_path,
+                                        self.storage_path)
 
+                        self.hires_filename_snr_df = pd.read_csv( os.path.join(self.storage_path, "HIRES_Filename_snr.csv"))
+                        if "rv_obs" == data_folder:
+                            
                             for _, row in self.hires_filename_snr_df.iterrows():
                                 # Save the Best Spectrum
                                 star_id = row["HIRESid"]
@@ -148,9 +150,7 @@ class CHIP:
                             self.interpolate()
                         
                         elif "norm" == data_folder:
-                            # Transfer norm files 
-                            shutil.copytree(data_folder_path,
-                                           os.path.join(self.storage_path,"norm"))
+                            
 
                             # Continue with normal operations 
                             self.alpha_normalization()
@@ -419,7 +419,7 @@ class CHIP:
     
         # Create Normalized Spectra dir
         self.norm_spectra_dir_path = os.path.join( self.storage_path, "norm" )
-        os.mkdir( self.norm_spectra_dir_path )
+        os.makedirs(self.norm_spectra_dir_path,exist_ok=True) 
 
         # Start parallel computing
         Parallel( n_jobs = self.cores )\
