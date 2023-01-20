@@ -6,7 +6,7 @@
     
         "run" : { 
             "val": false,
-            "description": "Do you want to run CHIP? If you want to use data from a past run, you need to specify the run's name and what data you want to use from that folder ex: [2022-12-28_22-13-57, rv_obs]."
+            "description": "Do you want to run CHIP (true/false)? If you want to use data from a past run, you need to specify the run's name and what data you want to use from that folder ex: [2022-12-28_22-13-57, rv_obs]."
         },
         
         "cross_match_stars" : {
@@ -41,12 +41,12 @@
         },
 
         "train test split" :{
-            "val": 0.4,
+            "val": 0.1,
             "description": "what fraction of the data set do you want to use for testing (ex: 0.4, 60% of the data set will be used for training, and 40% will be used for testing the best model)"
         },
 
         "stellar parameters" : {
-            "val": ["TEFF", "LOGG","VSINI", "FeH", "CH", "NH","OH","NaH", "MgH", "AlH", "SiH", "CaH", "TiH", "VH", "CrH", "MnH","NiH", "YH"],
+            "val": ["TEFF"],
             "description": "A list of the stellar parameters you want to train The Cannon on. The names need to reflect the spelling in data/spocs/stellar_parameters.csv."
         },
 
@@ -67,7 +67,7 @@
         },
 
         "batch size" : {
-            "val" : 32,
+            "val" : 2,
             "description" : "number of batches to split the training set into for mini-batch training"
         },
 
@@ -76,9 +76,6 @@
             "description" : "What degree polynomials do you want The Cannon to try to fit to the data? ex: [1,2]"
         }
 
-
-        
- 
     }
 
 }

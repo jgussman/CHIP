@@ -163,7 +163,8 @@ class CHIP:
         ''' Load in past data to continue preprocessing
 
         Input: data_folder_path (str): File path to rv_obs folder
-        
+
+        Output: None 
         '''
         for _, row in self.hires_filename_snr_df.iterrows():
             # Save the Best Spectrum
@@ -174,6 +175,7 @@ class CHIP:
                                                                 past_rv_obs_path=data_folder_path)
             # Calculate ivar
             self.sigma_calculation(filename , star_id)
+
 
     def get_arguments(self):
         ''' Get arguments from src/config.json and store in self.config 
@@ -224,45 +226,45 @@ class CHIP:
 
 
     def download_spectrum(self,filename,SNR = True, past_rv_obs_path = False):
-            '''Download Individual Spectrum and ivar 
+        '''Download Individual Spectrum and ivar 
 
-            Input: filename (str): HIRES file name of spectrum you want to download
-                   SNR (bool): if you want to calculate the SNR of the spectrum 
-                   past_rv_obs_path (str): if you want to load in old rb obs set to rb_obs dir path
+        Input: filename (str): HIRES file name of spectrum you want to download
+            SNR (bool): if you want to calculate the SNR of the spectrum 
+            past_rv_obs_path (str): if you want to load in old rb obs set to rb_obs dir path
 
-            Output: None
-            '''
-            logging.debug(f"CHIP.download_spectrum( filename={filename}, SNR={SNR}, past_rv_obs_path={past_rv_obs_path} )")
+        Output: None
+        '''
+        logging.debug(f"CHIP.download_spectrum( filename={filename}, SNR={SNR}, past_rv_obs_path={past_rv_obs_path} )")
+        
+        if not past_rv_obs_path:
+            #Download spectra
+            self.dataSpectra.spectrum(filename.replace("r",""))    
+            file_path = os.path.join(self.dataSpectra.localdir, filename + ".fits")
+
+            try: 
+                temp_deblazedFlux = fits.getdata(file_path)
+            except OSError:
+                # There is a problem with the downloaded fits file 
+                return -1
             
-            if not past_rv_obs_path:
-                #Download spectra
-                self.dataSpectra.spectrum(filename.replace("r",""))    
-                file_path = os.path.join(self.dataSpectra.localdir, filename + ".fits")
+            if SNR: # Used to find best SNR 
+                SNR = self.calculate_SNR(temp_deblazedFlux)
 
-                try: 
-                    temp_deblazedFlux = fits.getdata(file_path)
-                except OSError:
-                    # There is a problem with the downloaded fits file 
-                    return -1
-                
-                if SNR: # Used to find best SNR 
-                    SNR = self.calculate_SNR(temp_deblazedFlux)
-
-                    # delete Spectrum variable so it can be delete if needed
-                    del temp_deblazedFlux 
-                    return SNR
-                else:
-                    # Trim the left and right sides of each echelle order 
-                    return temp_deblazedFlux[:, self.trim: -self.trim]
+                # delete Spectrum variable so it can be delete if needed
+                del temp_deblazedFlux 
+                return SNR
             else:
-                # Load past data 
-                file_path = os.path.join(past_rv_obs_path, filename + ".fits")
-                if os.path.exists(file_path):
-                    temp_deblazedFlux = fits.getdata(file_path)
-                    return temp_deblazedFlux[:, self.trim: -self.trim]
-                else:
-                    # Star isn't in file location
-                    self.download_spectrum(filename,SNR,past_rv_obs_path = False)
+                # Trim the left and right sides of each echelle order 
+                return temp_deblazedFlux[:, self.trim: -self.trim]
+        else:
+            # Load past data 
+            file_path = os.path.join(past_rv_obs_path, filename + ".fits")
+            if os.path.exists(file_path):
+                temp_deblazedFlux = fits.getdata(file_path)
+                return temp_deblazedFlux[:, self.trim: -self.trim]
+            else:
+                # Star isn't in file location
+                self.download_spectrum(filename,SNR,past_rv_obs_path = False)
 
 
     def update_removedstars(self):
@@ -275,7 +277,8 @@ class CHIP:
         pd.DataFrame(self.removed_stars).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
                                                  index_label=False,
                                                  index=False)
-        
+
+
     def download_spectra(self):
         ''' Downloads all the spectra for each star in the NExSci, calculates 
         the SNR and saves the spectrum with the highest SNR for each star.
@@ -658,7 +661,6 @@ class CHIP:
 
         # load cost function 
         self.cost_function = eval(self.config["The Cannon"]["cost function"]["function"])
-
         # TODO: # Load masks 
         # self.masks = self.config["The Cannon"]["masks"]["val"]
         # for i in range(len(self.masks)):
@@ -667,10 +669,6 @@ class CHIP:
         #     if os.path.exists(mask_path):
         #         wl,mask = np.load(mask_path,unpack=True)
         #         trimming_mask = np.isin(self.wl_solution, wl)
-        
-        # TODO: DELETE
-        self.train_model(4,1)
-
 
 
     def evaluate_model(self,md,ds,true_labels):
@@ -711,7 +709,6 @@ class CHIP:
 
         return X_id, X_spec, X_ivar, X_parameters, y_id, y_spec, y_ivar, y_parameters
 
-
     def train_model(self,batch_size, poly_order ):
         ''' Train a Cannon model using mini-batch and k-fold cv
 
@@ -720,11 +717,13 @@ class CHIP:
         
         Output: The mean evaluation score 
         '''
-        print("TRAINING MODEL")
+        logging.info(f"train_model(batch_size = {batch_size}, poly_order={poly_order})")
         # Store the evaluations
         evaluation_list = []
         # Initialize The Cannon model 
+        
         for X_i, y_i in self.kfold_train_validation_splits:
+
             # Initialize new model
             cannon_model = self.initialize_model(poly_order = poly_order)
 
@@ -738,13 +737,14 @@ class CHIP:
                 # Get the start and end indices of the current mini-batch
                 start = i * batch_size
                 end = min((i + 1) * batch_size, X_spec.shape[0])
-                
-                ds = self.initailize_dataset(self.wl_solution,X_id[start:end], X_spec[start:end], X_ivar[start:end], X_param[start:end], y_id, y_spec, y_ivar, self.parameters_list)
 
-                # Fit the model on the current mini-batch
+                ds = self.initailize_dataset(self.wl_solution,
+                                             X_id[start:end], X_spec[start:end], X_ivar[start:end], X_param[start:end], 
+                                             y_id, y_spec, y_ivar, self.parameters_list)
+
+                # Fit the model on the current batch
                 cannon_model.fit(ds)
                 
-
             # Evaluate model
             evaluation_list.append(self.evaluate_model(cannon_model,ds,y_param))
         
@@ -759,9 +759,7 @@ class CHIP:
 
         Output: TheCannon.model.CannonModel object 
         '''
-
-        md = model.CannonModel( order = poly_order, useErrors=False )
-        
+        md = model.CannonModel( order = poly_order, useErrors=False )  
         return md 
 
 
@@ -785,8 +783,8 @@ class CHIP:
         ds = dataset.Dataset(wl_sol, X_id, X_flux, X_ivar, X_parameter, y_id, y_flux, y_ivar) 
         ds.set_label_names(parameters_names) 
         # wl ranges can be optimized for specific echelle ranges
-        #ds.ranges= [[np.min(wl_sol),np.max(wl_sol)]]
-        ds.ranges= [[np.min(wl_sol),np.min(wl_sol)+20]]
+        ds.ranges= [[np.min(wl_sol),np.max(wl_sol)]]
+        
         
         return ds
 
@@ -824,10 +822,10 @@ class CHIP:
         num_folds = self.config["The Cannon"]["kfolds"]["val"]
         kf = KFold(n_splits=num_folds, shuffle=True, random_state=self.random_seed)
         # So repeated call doesn't need to be made to kf every time. 
-        self.kfold_train_validation_splits = np.vstack(kf.split(self.test_spectra))
-        logging.info("kflod splits" + str(self.kfold_train_validation_splits))
+        self.kfold_train_validation_splits = list(kf.split(self.train_id)) #np.vstack(kf.split(self.train_spectra))
+        logging.info(f"{num_folds}-fold splits" + str(self.kfold_train_validation_splits))
 
-        logging.info(self.train_id[self.kfold_train_validation_splits[0][0]])
+
 
 
 
