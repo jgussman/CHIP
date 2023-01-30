@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import shutil
 import time 
+import itertools 
 
 
 from alpha_shapes import contfit_alpha_hull
@@ -152,8 +153,10 @@ class CHIP:
     
         elif self.config["The Cannon"]["run"]["val"]:
             logging.info(f"The Cannon {self.thecannon_version}")
+    
 
             self.load_the_cannon()
+            self.hyperparameter_tuning()
 
         else:
             logging.error("Neither CHIP or The Cannon were selected to run in config.json! Please select!")
@@ -709,6 +712,7 @@ class CHIP:
 
         return X_id, X_spec, X_ivar, X_parameters, y_id, y_spec, y_ivar, y_parameters
 
+
     def train_model(self,batch_size, poly_order ):
         ''' Train a Cannon model using mini-batch and k-fold cv
 
@@ -718,6 +722,9 @@ class CHIP:
         Output: The mean evaluation score 
         '''
         logging.info(f"train_model(batch_size = {batch_size}, poly_order={poly_order})")
+        
+           
+        
         # Store the evaluations
         evaluation_list = []
         # Initialize The Cannon model 
@@ -733,22 +740,41 @@ class CHIP:
             # Create mini-batches of the data
             num_batches = int(np.ceil(X_spec.shape[0] / batch_size))
 
+            break_out = False
+
             for i in range(num_batches):
                 # Get the start and end indices of the current mini-batch
                 start = i * batch_size
                 end = min((i + 1) * batch_size, X_spec.shape[0])
 
+                # Number of training examples can't be smaller than 3  
+                # check the next batch if it is smaller than 3 than add it to the current batch
+                # Only do this if it is not the last batch
+                if (i == num_batches - 2):
+                    next_start = (i + 1) * batch_size
+                    next_end = min((i + 2) * batch_size, X_spec.shape[0])
+                    if (next_end - next_start) < 3:
+                        end = next_end
+                        break_out = True
+
+                # Initialize the dataset
                 ds = self.initailize_dataset(self.wl_solution,
                                              X_id[start:end], X_spec[start:end], X_ivar[start:end], X_param[start:end], 
                                              y_id, y_spec, y_ivar, self.parameters_list)
 
                 # Fit the model on the current batch
                 cannon_model.fit(ds)
+
+                if break_out:
+                    break
                 
             # Evaluate model
             evaluation_list.append(self.evaluate_model(cannon_model,ds,y_param))
         
-        return np.mean(evaluation_list)
+        # Store the mean evaluation score into a file 
+        score = np.mean(evaluation_list)
+        logging.info(f"{batch_size},{poly_order},{score}")
+        return score
 
         
     @staticmethod
@@ -826,6 +852,40 @@ class CHIP:
         logging.info(f"{num_folds}-fold splits" + str(self.kfold_train_validation_splits))
 
 
+    def hyperparameter_tuning(self):
+        ''' Tune the hyperparameters of The Cannon model. This must be ran after self.cannon_splits is ran.
+
+        Input: None
+
+        Output: None
+        '''
+        logging.debug("CHIP.hyperparameter_tuning( )")
+
+        # Get the hyperparameters to tune
+        # batch size is the number of spectra to train on at a time (list) 
+        batch_size = self.config["The Cannon"]["batch size"]["val"]
+        # poly_order is the degree of the polynomial to fit (list)
+        poly_order = self.config["The Cannon"]["poly order"]["val"]
+
+        # Create a list of all the hyperparameters to tune
+        hyperparameters = [batch_size, poly_order]
+
+        # Create a list of all the hyperparameter names
+        hyperparameter_names = ["batch_size", "poly_order"]
+        
+        # Create a list of all the hyperparameter combinations
+        hyperparameter_combinations = list(itertools.product(*hyperparameters))
+
+        # Use joblib to parallelize the hyperparameter tuning
+        num_cores = self.config["The Cannon"]["cores"]["val"]
+        results = Parallel(n_jobs=num_cores)\
+                          (delayed(self.train_model)\
+                          (hyperparameter_combination[0],hyperparameter_combination[1]) for hyperparameter_combination in hyperparameter_combinations)
+        
+        # Get the best hyperparameters
+        best_hyperparameters = hyperparameter_combinations[np.argmin(results)]
+        logging.info("best hyperparameters" + str(best_hyperparameters)) 
+
 
 
 
@@ -843,12 +903,10 @@ if __name__ == "__main__":
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
-    chip = CHIP()
-    chip.run()
-
     try:
            
-        pass
+        chip = CHIP()
+        chip.run()
 
     except Exception as e:
         logging.error(e) 
@@ -860,8 +918,8 @@ if __name__ == "__main__":
         logging.shutdown()
 
         # TODO: Undo Comments below
-        # os.rename( log_filepath, 
-        #           os.path.join( chip.storage_path ,log_filename) )
+        os.rename( log_filepath, 
+                  os.path.join( chip.storage_path ,log_filename) )
 
 
     

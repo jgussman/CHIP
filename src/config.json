@@ -20,7 +20,7 @@
         },
 
         "cores" : { 
-            "val": 4,
+            "val": 2,
             "description": "How many cores on your machine would you like to use? -1 for all."
         }
 
@@ -33,6 +33,11 @@
         "run" : { 
             "val": "2022-12-28_22-13-57",
             "description": "If you want to run The Cannon set val to the name of the dir inside data/chip_runs you want to use (ex: 2022-12-24_06-57-37). Otherwise set to false."
+        },
+
+        "cores" : { 
+            "val": 2,
+            "description": "How many cores on your machine would you like to use? -1 for all."
         },
 
         "random seed" : { 
@@ -67,11 +72,11 @@
         },
 
         "batch size" : {
-            "val" : 2,
+            "val" : [3,4],
             "description" : "number of batches to split the training set into for mini-batch training"
         },
 
-        "poly orders" : {
+        "poly order" : {
             "val" : [1,2],
             "description" : "What degree polynomials do you want The Cannon to try to fit to the data? ex: [1,2]"
         }
