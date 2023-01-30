@@ -18,8 +18,7 @@ from joblib import Parallel, delayed
 from PyAstronomy import pyasl
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.preprocessing import StandardScaler
-from TheCannon import dataset
-from TheCannon import model
+from TheCannon import dataset, model
 
 
 
@@ -881,9 +880,10 @@ class CHIP:
         results = Parallel(n_jobs=num_cores)\
                           (delayed(self.train_model)\
                           (hyperparameter_combination[0],hyperparameter_combination[1]) for hyperparameter_combination in hyperparameter_combinations)
-        
+    
         # Get the best hyperparameters
         best_hyperparameters = hyperparameter_combinations[np.argmin(results)]
+        # Log the best hyperparameters
         logging.info("best hyperparameters" + str(best_hyperparameters)) 
 
 
