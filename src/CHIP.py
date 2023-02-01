@@ -664,15 +664,55 @@ class CHIP:
 
         # load cost function 
         self.cost_function = eval(self.config["The Cannon"]["cost function"]["function"])
-        # TODO: # Load masks 
-        # self.masks = self.config["The Cannon"]["masks"]["val"]
-        # for i in range(len(self.masks)):
-        #     mask_name = self.masks[i][0]
-        #     mask_path = self.masks[i][1]
-        #     if os.path.exists(mask_path):
-        #         wl,mask = np.load(mask_path,unpack=True)
-        #         trimming_mask = np.isin(self.wl_solution, wl)
+        # Load masks 
+        masks_list = self.config["The Cannon"]["masks"]["val"]
+        self.masks = {mask_name: self.create_mask_array(mask_path) for mask_name, mask_path in masks_list}
 
+
+    def create_mask_array(self,mask_path):
+        ''' Create a mask array for the The Cannon. 
+        
+        Input: mask_path (str) - path to the mask
+               
+        Output: (np.array((wl_solution.shape[0],))) - masked boolean array
+        '''
+        logging.debug("CHIP.create_mask_array( mask_path={mask_path}})") 
+
+        # Create a (wl_solution.shape[0],) array of Falses
+        masked_bool_array = np.zeros(self.wl_solution.shape[0], dtype=bool)
+
+        if not mask_path:
+            # If no mask path is given, return the array of Falses
+            return masked_bool_array
+
+        mask = np.load(mask_path)
+        mask_flux = mask[1,:]
+        mask_wl = mask[0,:]
+
+        wl_range = []
+        continuing_range = False 
+        beginning_of_range = 0
+        for i,pixel_val in enumerate(mask_flux):
+            if pixel_val == 0:
+                if not continuing_range:
+                    beginning_of_range = mask_wl[i]
+                    continuing_range = True
+            else:
+                if continuing_range: 
+                    wl_range.append( (beginning_of_range,mask_wl[i]) )
+                    continuing_range = False
+
+        
+        # Mask the wavelength solution
+        for masked_range in wl_range:
+            start_masked_wl = masked_range[0]
+            end_masked_wl = masked_range[1]
+
+            # Use numpy logical and to mask the wavelength solution
+            mask_out_i = np.logical_and(self.wl_solution >= start_masked_wl, self.wl_solution <= end_masked_wl)
+            masked_bool_array = np.logical_or(masked_bool_array, mask_out_i)
+        
+        return masked_bool_array
 
     def evaluate_model(self,md,ds,true_labels):
         ''' Evaluate how well a model was trained.
@@ -713,16 +753,17 @@ class CHIP:
         return X_id, X_spec, X_ivar, X_parameters, y_id, y_spec, y_ivar, y_parameters
 
 
-    def train_model(self,batch_size, poly_order, test_set=False):
+    def train_model(self,batch_size, poly_order, mask_name, test_set=False):
         ''' Train a Cannon model using mini-batch and k-fold cv
 
         Input: batch_size (int) : number of batches to split the training set into for mini-batch training
                poly_order (int) : A positive int, tells the model what degree polynomial to fit
+               mask_name (str) : name of the mask to use
                test_set (bool) : If True, the model will be evaluated on the test set, instead of the validation set
         
         Output: The mean evaluation score 
         '''
-        logging.info(f"train_model(batch_size = {batch_size}, poly_order={poly_order})")
+        logging.info(f"train_model(batch_size = {batch_size}, poly_order={poly_order}, mask_name={mask_name}, test_set={test_set})")
         
         def mini_batch(cannon_model,batch_size,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar):
             ''' Train a Cannon model using mini-batch
@@ -772,6 +813,29 @@ class CHIP:
 
             return cannon_model
 
+        def apply_mask(X_spec, X_ivar, y_spec, y_ivar,mask):
+            ''' Mask the spectra and ivars
+
+            Input:  X_spec (np.array((M,N))) - flux for each star in X_id
+                    X_ivar (np.array((M,N))) - ivar for each star in X_id
+                    y_spec (np.array((V,N))) - flux for each star in y_id
+                    y_ivar (np.array((V,N))) - ivar for each star in y_id
+
+            Output: X_spec (np.array((M,N))) - mask applied flux for each star in X_id
+                    X_ivar (np.array((M,N))) - mask applied ivar for each star in X_id
+                    y_spec (np.array((V,N))) - mask applied flux for each star in y_id
+                    y_ivar (np.array((V,N))) - mask applied ivar for each star in y_id
+            '''
+            # Create copies of the arrays to avoid changing the original arrays
+            Xspec, Xivar, yspec, yivar = X_spec.copy(), X_ivar.copy(), y_spec.copy(), y_ivar.copy()
+
+            # To do it without using a for-loop 
+            Xspec[:,mask], Xivar[:,mask] = 0,0
+            yspec[:,mask], yivar[:,mask] = 0,0
+
+
+            return Xspec, Xivar,yspec, yivar
+
         if not test_set:
             # Store the evaluations
             evaluation_list = []
@@ -784,6 +848,9 @@ class CHIP:
 
                 # Split training and validation
                 X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, y_param = self.split_data(X_i, y_i)
+
+                # Mask the spectra and ivars
+                X_spec, X_ivar, y_spec, y_ivar = apply_mask(X_spec, X_ivar, y_spec, y_ivar, self.masks[mask_name])
 
                 # Train the model
                 cannon_model = mini_batch(cannon_model,batch_size,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar)
@@ -806,6 +873,9 @@ class CHIP:
 
             X_id, X_spec, X_ivar = self.train_id, self.train_spectra, self.train_ivar, 
             y_id, y_spec, y_ivar = self.test_id, self.test_spectra, self.test_ivar, 
+
+            # Mask the spectra and ivars
+            X_spec, X_ivar, y_spec, y_ivar = apply_mask(X_spec, X_ivar, y_spec, y_ivar, self.masks[mask_name])
 
             X_param = np.array(self.train_parameter.to_numpy()[:,1:], dtype=np.float) 
             y_param = np.array(self.test_parameter.to_numpy()[:,1:], dtype=np.float) 
@@ -915,10 +985,10 @@ class CHIP:
         poly_order = self.config["The Cannon"]["poly order"]["val"]
 
         # Create a list of all the hyperparameters to tune
-        hyperparameters = [batch_size, poly_order]
+        hyperparameters = [batch_size, poly_order, self.masks]
 
         # Create a list of all the hyperparameter names
-        hyperparameter_names = ["batch_size", "poly_order"]
+        hyperparameter_names = ["batch_size", "poly_order","mask"]
         
         # Create a list of all the hyperparameter combinations
         hyperparameter_combinations = list(itertools.product(*hyperparameters))
@@ -927,7 +997,7 @@ class CHIP:
         num_cores = self.config["The Cannon"]["cores"]["val"]
         results = Parallel(n_jobs=num_cores)\
                           (delayed(self.train_model)\
-                          (hyperparameter_combination[0],hyperparameter_combination[1]) for hyperparameter_combination in hyperparameter_combinations)
+                          (hyperparameter_combination[0],hyperparameter_combination[1],hyperparameter_combination[2]) for hyperparameter_combination in hyperparameter_combinations)
     
         # Get the best hyperparameters
         best_hyperparameters = hyperparameter_combinations[np.argmin(results)]
@@ -935,10 +1005,10 @@ class CHIP:
         logging.info("best hyperparameters" + str(best_hyperparameters)) 
 
         # Train the model with the best hyperparameters
-        self.train_best_model(best_hyperparameters[0], best_hyperparameters[1])
+        self.train_best_model(best_hyperparameters[0], best_hyperparameters[1], best_hyperparameters[2])
 
 
-    def train_best_model(self, batch_size, poly_order):
+    def train_best_model(self, batch_size, poly_order, mask_name):
         ''' Train the best model with the best hyperparameters. This must be ran after self.hyperparameter_tuning is ran.
 
         Input: batch_size (int) the 
@@ -946,10 +1016,10 @@ class CHIP:
 
         Output: None
         '''
-        logging.debug("CHIP.train_best_model( )")
+        logging.debug(f"CHIP.train_best_model( batch_size={batch_size}, poly_order={poly_order}, mask_name={mask_name})")
 
         # Train the model with the best hyperparameters
-        cannon_model = self.train_model(batch_size, poly_order,test_set=True)
+        cannon_model = self.train_model(batch_size, poly_order, mask_name, test_set=True)
 
         # Save the model
         self.save_model(cannon_model)
@@ -980,23 +1050,24 @@ if __name__ == "__main__":
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
-
-    try:
+    chip = CHIP()
+    chip.run()
+    # try:
            
-        chip = CHIP()
-        chip.run()
+    #     chip = CHIP()
+    #     chip.run()
 
-    except Exception as e:
-        logging.error(e) 
+    # except Exception as e:
+    #     logging.error(e) 
 
-    finally:
-        # Move logging file to the location of this current run
-        log_filename = os.path.basename(log_filepath)
-        # Shutdown logging so the file can be put in the storage location
-        logging.shutdown()
+    # finally:
+    #     # Move logging file to the location of this current run
+    #     log_filename = os.path.basename(log_filepath)
+    #     # Shutdown logging so the file can be put in the storage location
+    #     logging.shutdown()
 
-        os.rename( log_filepath, 
-                  os.path.join( chip.storage_path ,log_filename) )
+        # os.rename( log_filepath, 
+        #           os.path.join( chip.storage_path ,log_filename) )
 
 
     
