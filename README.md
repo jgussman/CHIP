@@ -17,10 +17,10 @@
 
 [ ] Refactor TheCannonCHIP
 
-    [ ] Use mini-batch
+    [X] Use mini-batch
 
-    [ ] Use k-fold cv
-    
+    [X] Use k-fold cv
+        
 [ ] Create DockerImage for reproducability
 
 [ ] How to use README
