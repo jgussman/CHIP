@@ -1,4 +1,5 @@
 import logging
+import joblib
 import json
 import os
 import numpy as np
@@ -712,35 +713,37 @@ class CHIP:
         return X_id, X_spec, X_ivar, X_parameters, y_id, y_spec, y_ivar, y_parameters
 
 
-    def train_model(self,batch_size, poly_order ):
+    def train_model(self,batch_size, poly_order, test_set=False):
         ''' Train a Cannon model using mini-batch and k-fold cv
 
         Input: batch_size (int) : number of batches to split the training set into for mini-batch training
                poly_order (int) : A positive int, tells the model what degree polynomial to fit
+               test_set (bool) : If True, the model will be evaluated on the test set, instead of the validation set
         
         Output: The mean evaluation score 
         '''
         logging.info(f"train_model(batch_size = {batch_size}, poly_order={poly_order})")
         
-           
-        
-        # Store the evaluations
-        evaluation_list = []
-        # Initialize The Cannon model 
-        
-        for X_i, y_i in self.kfold_train_validation_splits:
+        def mini_batch(cannon_model,batch_size,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar):
+            ''' Train a Cannon model using mini-batch
 
-            # Initialize new model
-            cannon_model = self.initialize_model(poly_order = poly_order)
+            Input: cannon_model (TheCannon.model.CannonModel) - A Cannon model
+                   batch_size (int) : number of batches to split the training set into for mini-batch training
+                   X_id (np.array((M,))) - HIRES identifers that correspond to the rows in X_flux, X_ivar, and X_parameter
+                   X_flux (np.array((M,N))) - flux for each star in X_id 
+                   X_ivar (np.array((M,N))) - ivar for each star in X_id 
+                   X_parameter (np.array((M,P))) - contains all the parameters for each star in X_id (in the exact same order)
+                   y_id (np.array((V,))) - HIRES identifers that correspond to the rows in y_flux, y_ivar
+                   y_flux (np.array((V,N))) - flux for each star in y_id 
+                   y_ivar (np.array((V,N))) - ivar for each star in y_id 
+            
+            Output: cannon_model (TheCannon.model.CannonModel) - A trained Cannon model
 
-            # Split training and validation
-            X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, y_param = self.split_data(X_i, y_i)
-
+            '''
             # Create mini-batches of the data
             num_batches = int(np.ceil(X_spec.shape[0] / batch_size))
 
             break_out = False
-
             for i in range(num_batches):
                 # Get the start and end indices of the current mini-batch
                 start = i * batch_size
@@ -766,16 +769,63 @@ class CHIP:
 
                 if break_out:
                     break
-                
-            # Evaluate model
-            evaluation_list.append(self.evaluate_model(cannon_model,ds,y_param))
-        
-        # Store the mean evaluation score into a file 
-        score = np.mean(evaluation_list)
-        logging.info(f"{batch_size},{poly_order},{score}")
-        return score
 
-        
+            return cannon_model
+
+        if not test_set:
+            # Store the evaluations
+            evaluation_list = []
+            # Initialize The Cannon model 
+            
+            for X_i, y_i in self.kfold_train_validation_splits:
+
+                # Initialize new model
+                cannon_model = self.initialize_model(poly_order = poly_order)
+
+                # Split training and validation
+                X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, y_param = self.split_data(X_i, y_i)
+
+                # Train the model
+                cannon_model = mini_batch(cannon_model,batch_size,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar)
+
+                ds = self.initailize_dataset(self.wl_solution,
+                                                X_id, X_spec, X_ivar, X_param, 
+                                                y_id, y_spec, y_ivar, self.parameters_list)
+
+                # Evaluate model
+                evaluation_list.append(self.evaluate_model(cannon_model,ds,y_param))
+            
+            # Store the mean evaluation score into a file 
+            score = np.mean(evaluation_list)
+            logging.info(f"{batch_size},{poly_order},{score}")
+            return score
+
+        else:
+            # Initialize new model
+            cannon_model = self.initialize_model(poly_order = poly_order)
+
+            X_id, X_spec, X_ivar = self.train_id, self.train_spectra, self.train_ivar, 
+            y_id, y_spec, y_ivar = self.test_id, self.test_spectra, self.test_ivar, 
+
+            X_param = np.array(self.train_parameter.to_numpy()[:,1:], dtype=np.float) 
+            y_param = np.array(self.test_parameter.to_numpy()[:,1:], dtype=np.float) 
+
+
+            # Train the model
+            cannon_model = mini_batch(cannon_model,batch_size,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar)
+
+            ds = self.initailize_dataset(self.wl_solution,
+                                         X_id, X_spec, X_ivar, X_param, 
+                                         y_id, y_spec,y_ivar, 
+                                         self.parameters_list)
+
+            # Evaluate model
+            # Store the mean evaluation score into a file 
+            score = self.evaluate_model(cannon_model,ds,y_param)
+            logging.info(f"Best model when trained on entire test set: {score}")
+            return cannon_model
+                
+
     @staticmethod
     def initialize_model(poly_order = 1):
         ''' Initialize The Cannon Model
@@ -809,15 +859,13 @@ class CHIP:
         ds.set_label_names(parameters_names) 
         # wl ranges can be optimized for specific echelle ranges
         ds.ranges= [[np.min(wl_sol),np.max(wl_sol)]]
-        
-        
         return ds
 
 
     def cannon_splits(self, parameters_df):
         ''' Apply test and validation splits to the data. This must be ran after self.parameters_df is created.
         
-        Input: None
+        Input: parameters_df (pd.DataFrame) : contains all the parameters for each star in X_id (in the exact same order)
 
         Output: None
         '''
@@ -886,7 +934,36 @@ class CHIP:
         # Log the best hyperparameters
         logging.info("best hyperparameters" + str(best_hyperparameters)) 
 
+        # Train the model with the best hyperparameters
+        self.train_best_model(best_hyperparameters[0], best_hyperparameters[1])
 
+
+    def train_best_model(self, batch_size, poly_order):
+        ''' Train the best model with the best hyperparameters. This must be ran after self.hyperparameter_tuning is ran.
+
+        Input: batch_size (int) the 
+               poly_order (int)
+
+        Output: None
+        '''
+        logging.debug("CHIP.train_best_model( )")
+
+        # Train the model with the best hyperparameters
+        cannon_model = self.train_model(batch_size, poly_order,test_set=True)
+
+        # Save the model
+        self.save_model(cannon_model)
+
+
+    def save_model(self,cannon_model):
+        '''
+        Save the model to a file
+        '''
+        logging.debug("CHIP.save_model( )")
+
+        model_filepath = os.path.join(self.storage_path, "best_model.joblib")
+
+        joblib.dump(cannon_model, model_filepath)
 
 
 
@@ -903,6 +980,7 @@ if __name__ == "__main__":
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
+
     try:
            
         chip = CHIP()
@@ -917,7 +995,6 @@ if __name__ == "__main__":
         # Shutdown logging so the file can be put in the storage location
         logging.shutdown()
 
-        # TODO: Undo Comments below
         os.rename( log_filepath, 
                   os.path.join( chip.storage_path ,log_filename) )
 
