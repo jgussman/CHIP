@@ -888,6 +888,12 @@ class CHIP:
                                          X_id, X_spec, X_ivar, X_param, 
                                          y_id, y_spec,y_ivar, 
                                          self.parameters_list)
+            # Save test set 
+            test_set_filepath = os.path.join(self.storage_path, "y_param.joblib")  
+            joblib.dump(y_param, test_set_filepath)
+            # Save ds 
+            ds_filepath = os.path.join(self.storage_path, "ds.joblib")
+            joblib.dump(ds, ds_filepath)
 
             # Evaluate model
             # Store the mean evaluation score into a file 
@@ -992,6 +998,7 @@ class CHIP:
         
         # Create a list of all the hyperparameter combinations
         hyperparameter_combinations = list(itertools.product(*hyperparameters))
+        logging.info("hyperparameter combinations" + str(hyperparameter_combinations))
 
         # Use joblib to parallelize the hyperparameter tuning
         num_cores = self.config["The Cannon"]["cores"]["val"]
@@ -1002,7 +1009,7 @@ class CHIP:
         # Get the best hyperparameters
         best_hyperparameters = hyperparameter_combinations[np.argmin(results)]
         # Log the best hyperparameters
-        logging.info("best hyperparameters" + str(best_hyperparameters)) 
+        logging.info(f"best hyperparameters: {hyperparameter_names[0]}={best_hyperparameters[0]}, {hyperparameter_names[1]}={best_hyperparameters[1]}, {hyperparameter_names[2]}={best_hyperparameters[2]}") 
 
         # Train the model with the best hyperparameters
         self.train_best_model(best_hyperparameters[0], best_hyperparameters[1], best_hyperparameters[2])
@@ -1023,6 +1030,8 @@ class CHIP:
 
         # Save the model
         self.save_model(cannon_model)
+
+        
 
 
     def save_model(self,cannon_model):
