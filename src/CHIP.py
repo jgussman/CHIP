@@ -1005,7 +1005,12 @@ class CHIP:
         results = Parallel(n_jobs=num_cores)\
                           (delayed(self.train_model)\
                           (hyperparameter_combination[0],hyperparameter_combination[1],hyperparameter_combination[2]) for hyperparameter_combination in hyperparameter_combinations)
+
+        # Log the results with the hyperparameters
+        for i, hyperparameter_combination in enumerate(hyperparameter_combinations):
+            logging.info(f"{hyperparameter_names[0]}={hyperparameter_combination[0]}, {hyperparameter_names[1]}={hyperparameter_combination[1]}, {hyperparameter_names[2]}={hyperparameter_combination[2]}, result={results[i]}")
     
+
         # Get the best hyperparameters
         best_hyperparameters = hyperparameter_combinations[np.argmin(results)]
         # Log the best hyperparameters
