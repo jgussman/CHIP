@@ -7,6 +7,7 @@
 2. Next you will want to configure the [config.json](https://github.com/jgussman/CHIP/blob/updated/src/config.json). You can set the "cores" parameter to a higher number if you want the preprocessing to run faster.
 
 ```
+
     "CHIP": {
 
         "description": "Arguments for preprocessing pipeline",
@@ -32,7 +33,8 @@
         }
 
     }
-    ```
+
+```
 
 3. Once configured, run the following commands in your anaconda prompt `conda activate chip` then while you are in the root directory of the CHIP run `python src/CHIP.py` 
 
@@ -41,6 +43,7 @@
 5. To train The Cannon, make the following changes to `src/config.json`, make sure you change The Cannon's run parameter to your specific run folder name. 
 
 ```
+
 {   
  
     "CHIP": {
@@ -114,6 +117,7 @@
     }
 
 }
+
 ```
 
 6. The results of The Cannon will be stored in a subfolder called "cannon_results" in the same run folder you specified in the config file.
