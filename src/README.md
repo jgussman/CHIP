@@ -2,7 +2,9 @@
 
 ## How-To
 
-1. Get a file with at least one column named "HIRES". The values in this column are the IDs of the stars you want to use from the KOA. An example of this is [starnames_crossmatch_SPOCS_NEXSCI.txt](https://github.com/jgussman/CHIP/blob/updated/data/spocs/starnames_crossmatch_SPOCS_NEXSCI.txt). 
+1. You must have file that contains the abudances of the stars you would like to train The Cannon on. The first column must be an identifier and the IDs should match up with the non-HIRES column in the next step. Example: [stellar_parameters.csv](https://github.com/jgussman/CHIP/blob/updated/data/spocs/stellar_parameters.csv)
+
+1. Get a file with at least one column named "HIRES". The values in this column are the IDs of the stars you want to use from the KOA. The other column must have matching IDs to that of the ID columns in step 1. An example of this is [starnames_crossmatch_SPOCS_NEXSCI.txt](https://github.com/jgussman/CHIP/blob/updated/data/spocs/starnames_crossmatch_SPOCS_NEXSCI.txt). 
 
 2. Next you will want to configure the [config.json](https://github.com/jgussman/CHIP/blob/updated/src/config.json). You can set the "cores" parameter to a higher number if you want the preprocessing to run faster.
 
