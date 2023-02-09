@@ -26,7 +26,7 @@ To set up the environment required to use CHIP, you will need [Anaconda 3](https
 
 Clone this repository by entering the following into your terminal:
 
-```git clone https://github.com/jgussman/CHIP'''
+```git clone https://github.com/jgussman/CHIP```
 
 ### Step 2
 Set up the environment required to use CHIP, using [Anaconda 3](https://www.anaconda.com).
