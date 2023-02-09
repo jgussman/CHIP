@@ -10,19 +10,26 @@ The CHIP pipeline is designed to extract stellar parameters from iodine-imprinte
 - "Learns" patterns in the input dataset by optimizing a set of model hyperparameters with The Cannon 
 - Plots the results extracted from the best-fitting model
 
-## Installation
----
 
-### Step 0
+## Dependencies
+---
 
 To access the input Keck/HIRES data, you must have a KOA account. To request an account, submit a ticket [here](https://koa.ipac.caltech.edu/cgi-bin/Helpdesk/nph-genTicketForm?projname=KOA).
 
+To set up the environment required to use CHIP, you will need [Anaconda 3](https://www.anaconda.com).
+
+
+## Installation
+---
+
 ### Step 1
 
-Clone this repository.
+Clone this repository by entering the following into your terminal:
+
+```git clone https://github.com/jgussman/CHIP'''
 
 ### Step 2
-To set up the environment required to use CHIP, you will need [Anaconda 3](https://www.anaconda.com).
+Set up the environment required to use CHIP, using [Anaconda 3](https://www.anaconda.com).
 
 ```conda create --name chip python=3.8.5```
 
