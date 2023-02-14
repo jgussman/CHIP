@@ -1,10 +1,7 @@
 # ignore all fits files 
-*.fits
-*.cpython
-*.cookies
-__pycache__/
-RVOutput/
-SpectraOutput/
-Normalized_Spectra/
-Best_Model_Results/
-
+prv.cookies
+*.log
+DELETE*
+data/chip_runs/
+__pycache__
+*.job

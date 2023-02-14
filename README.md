@@ -44,11 +44,11 @@ Set up the environment required to use CHIP, using [Anaconda 3](https://www.anac
 If you are using a Windows machine, you need to download [geos_c.dll](https://www.dll-files.com/geos_c.dll.html) and move the file to the CHIP python environment's Library/bin folder. You can read more about this problem [here](https://github.com/Toblerity/Shapely/pull/1108).
 
 ### Step 3
-You're now ready to run CHIP! Inside the [ScriptsAndData](https://github.com/jgussman/CHIP/tree/main/ScriptsAndData) directory, you will find another README file with details about how to initialize and run CHIP.
+You're now ready to run CHIP! Inside the [src](https://github.com/jgussman/CHIP/blob/updated/src/README.md) directory, you will find another README file with details about how to run CHIP.
 
 
 ---
 # Contact Info
 --- 
 
-The author of this pipeline can be reached via email at jgussman@iu.edu.
+Email: judegussman@gmail.com.
