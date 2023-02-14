@@ -655,6 +655,7 @@ class CHIP:
         self.parameters_scaler = StandardScaler()
         # Fit the scaler to the selected columns and transform the selected columns
         parameters_transformed = self.parameters_scaler.fit_transform( self.parameters_df[self.parameters_list] )
+
         # change values in df 
         self.parameters_df[self.parameters_list] = parameters_transformed
 
@@ -714,7 +715,8 @@ class CHIP:
         
         return masked_bool_array
 
-    def evaluate_model(self,md,ds,true_labels):
+
+    def evaluate_model(self, md, ds, true_labels):
         ''' Evaluate how well a model was trained.
 
         Input: md (TheCannon.model.CannonModel) - 
@@ -728,7 +730,7 @@ class CHIP:
         return self.cost_function(true_labels, infered_labels)
         
 
-    def split_data(self,X_indecies, y_indecies):
+    def split_data(self, X_indecies, y_indecies):
         ''' Split data to be put in TheCannon.dataset.Dataset
 
         Input: X_indecies (np.array((N,))) - indecies to be used for the training set
@@ -1005,6 +1007,7 @@ class CHIP:
         results = Parallel(n_jobs=num_cores)\
                           (delayed(self.train_model)\
                           (hyperparameter_combination[0],hyperparameter_combination[1],hyperparameter_combination[2]) for hyperparameter_combination in hyperparameter_combinations)
+       
 
         # Log the results with the hyperparameters
         for i, hyperparameter_combination in enumerate(hyperparameter_combinations):
@@ -1036,8 +1039,6 @@ class CHIP:
         # Save the model
         self.save_model(cannon_model)
 
-        
-
 
     def save_model(self,cannon_model):
         '''
@@ -1048,6 +1049,10 @@ class CHIP:
         model_filepath = os.path.join(self.storage_path, "best_model.joblib")
 
         joblib.dump(cannon_model, model_filepath)
+
+        # Save the scaler
+        transformer_filepath = os.path.join(self.storage_path, "standard_scaler.joblib")
+        joblib.dump(self.parameters_scaler, transformer_filepath)
 
 
 
