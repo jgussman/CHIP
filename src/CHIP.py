@@ -83,7 +83,8 @@ class CHIP:
             rand_seed = self.config["The Cannon"]["random seed"]["val"]
             test_frac = self.config["The Cannon"]["train test split"]["val"]
             cost_fun  = self.config["The Cannon"]["cost function"]["name"].replace(" ", "-")
-            semi_unique_subdir = f"{rand_seed}_{test_frac}_{cost_fun}"
+            k_fold    = self.config["The Cannon"]["kfolds"]["val"]
+            semi_unique_subdir = f"{rand_seed}_{test_frac}_{cost_fun}_{k_fold}"
             
             self.storage_path = os.path.join( self.data_dir_path, "cannon_results", semi_unique_subdir )
             
@@ -1074,10 +1075,11 @@ if __name__ == "__main__":
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
+    chip = CHIP()
+    chip.run()
     try:
-           
-        chip = CHIP()
-        chip.run()
+        
+        pass
 
     except Exception as e:
         logging.error(e) 
@@ -1089,14 +1091,4 @@ if __name__ == "__main__":
         logging.shutdown()
 
         os.rename( log_filepath, 
-                  os.path.join( chip.storage_path ,log_filename) )
-
-
-    
-
-
-
-
-
-
-
+                   os.path.join( chip.storage_path, log_filename) )
