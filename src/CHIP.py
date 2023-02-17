@@ -716,7 +716,7 @@ class CHIP:
         return masked_bool_array
 
 
-    def evaluate_model(self, md, ds, true_labels):
+    def evaluate_model(self, md, ds, true_labels, save = False):
         ''' Evaluate how well a model was trained.
 
         Input: md (TheCannon.model.CannonModel) - 
@@ -725,9 +725,14 @@ class CHIP:
         
         '''
         label_errors = md.infer_labels(ds)
-        infered_labels = ds.test_label_vals
+        inferred_labels = ds.test_label_vals
 
-        return self.cost_function(true_labels, infered_labels)
+        if save:
+            # Save inferred labels
+            joblib.dump(inferred_labels, os.path.join(self.storage_path,'inferred_labels.npy'))
+
+
+        return self.cost_function(true_labels, inferred_labels)
         
 
     def split_data(self, X_indecies, y_indecies):
@@ -879,9 +884,9 @@ class CHIP:
             # Mask the spectra and ivars
             X_spec, X_ivar, y_spec, y_ivar = apply_mask(X_spec, X_ivar, y_spec, y_ivar, self.masks[mask_name])
 
+            # [:,1:] to remove the first column which is the abundance name 
             X_param = np.array(self.train_parameter.to_numpy()[:,1:], dtype=np.float) 
             y_param = np.array(self.test_parameter.to_numpy()[:,1:], dtype=np.float) 
-
 
             # Train the model
             cannon_model = mini_batch(cannon_model,batch_size,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar)
@@ -899,7 +904,7 @@ class CHIP:
 
             # Evaluate model
             # Store the mean evaluation score into a file 
-            score = self.evaluate_model(cannon_model,ds,y_param)
+            score = self.evaluate_model(cannon_model,ds,y_param, save = True)
             logging.info(f"Best model when trained on entire test set: {score}")
             return cannon_model
                 
@@ -1069,24 +1074,22 @@ if __name__ == "__main__":
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
-    chip = CHIP()
-    chip.run()
-    # try:
+    try:
            
-    #     chip = CHIP()
-    #     chip.run()
+        chip = CHIP()
+        chip.run()
 
-    # except Exception as e:
-    #     logging.error(e) 
+    except Exception as e:
+        logging.error(e) 
 
-    # finally:
-    #     # Move logging file to the location of this current run
-    #     log_filename = os.path.basename(log_filepath)
-    #     # Shutdown logging so the file can be put in the storage location
-    #     logging.shutdown()
+    finally:
+        # Move logging file to the location of this current run
+        log_filename = os.path.basename(log_filepath)
+        # Shutdown logging so the file can be put in the storage location
+        logging.shutdown()
 
-        # os.rename( log_filepath, 
-        #           os.path.join( chip.storage_path ,log_filename) )
+        os.rename( log_filepath, 
+                  os.path.join( chip.storage_path ,log_filename) )
 
 
     

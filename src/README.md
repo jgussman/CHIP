@@ -1,10 +1,20 @@
 # Tutorial 
 
+---
+The config.json file contains settings for two pipeline stages: CHIP and The Cannon.
+
+For the CHIP stage, users can specify whether to run it, the path to the cross-match names file, the number of pixels to remove from the left and right edges of each echelle order, and the number of cores to use.
+
+For The Cannon stage, users can specify the run name, the number of cores to use, the random seed, the train-test split fraction, the stellar parameters to use, the cost function to use, any masks to apply, the number of folds for k-fold cross-validation, the batch size, and the polynomial order.
+
+Users should modify the values of the "val" keys to adjust these settings according to their needs. The "description" keys provide further information on what each setting does.
+---
+
+
 ## How-To
 
-1. You must have file that contains the abudances of the stars you would like to train The Cannon on. The first column must be an identifier and the IDs should match up with the non-HIRES column in the next step. Example: [stellar_parameters.csv](https://github.com/jgussman/CHIP/blob/updated/data/spocs/stellar_parameters.csv)
 
-1. Get a file with at least one column named "HIRES". The values in this column are the IDs of the stars you want to use from the KOA. The other column must have matching IDs to that of the ID columns in step 1. An example of this is [starnames_crossmatch_SPOCS_NEXSCI.txt](https://github.com/jgussman/CHIP/blob/updated/data/spocs/starnames_crossmatch_SPOCS_NEXSCI.txt). 
+1. Get a file with at least one column named "HIRES". The values in this column are the IDs of the stars you want to use from the KOA. The other column must have matching IDs to that of the ID columns in stellar_parameter.csv. An example of this is [starnames_crossmatch_SPOCS_NEXSCI.txt](https://github.com/jgussman/CHIP/blob/updated/data/spocs/starnames_crossmatch_SPOCS_NEXSCI.txt). 
 
 2. Next you will want to configure the [config.json](https://github.com/jgussman/CHIP/blob/updated/src/config.json). You can set the "cores" parameter to a higher number if you want the preprocessing to run faster.
 
@@ -41,6 +51,8 @@
 3. Once configured, run the following commands in your anaconda prompt `conda activate chip` then while you are in the root directory of the CHIP run `python src/CHIP.py` 
 
 4. Once step 3 is finished, you can look in `data/chip_runs` folder to find the results of preprocessing. 
+
+1. You must have file that contains the abudances of the stars you would like to train The Cannon on. The first column must be an identifier and the IDs should match up with the non-HIRES column in the next step. Example: [stellar_parameters.csv](https://github.com/jgussman/CHIP/blob/updated/data/spocs/stellar_parameters.csv)
 
 5. To train The Cannon, make the following changes to `src/config.json`, make sure you change The Cannon's run parameter to your specific run folder name. 
 
