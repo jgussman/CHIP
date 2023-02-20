@@ -5,3 +5,4 @@ DELETE*
 data/chip_runs/
 __pycache__
 *.job
+src/config.json
