@@ -278,9 +278,15 @@ class CHIP:
 
         Output: None
         '''
-        pd.DataFrame(self.removed_stars).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
-                                                 index_label=False,
-                                                 index=False)
+        logging.debug("CHIP.update_removedstars( )")
+
+        # Update removed_stars
+        logging.info(f"Current removed stars: {self.removed_stars}")
+        # pd.DataFrame(self.removed_stars).to_csv( os.path.join(self.storage_path ,"removed_stars.csv"),
+        #                                          index_label=False,
+        #                                          index=False)
+        # Use joblib to save removed_stars
+        joblib.dump(self.removed_stars, os.path.join(self.storage_path ,"removed_stars.pkl"))
 
 
     def download_spectra(self):
@@ -1060,6 +1066,11 @@ class CHIP:
         transformer_filepath = os.path.join(self.storage_path, "standard_scaler.joblib")
         joblib.dump(self.parameters_scaler, transformer_filepath)
 
+        # Save the parameters names
+        parameters_filepath = os.path.join(self.storage_path, "parameters_names.joblib")
+        joblib.dump(self.parameters_list, parameters_filepath)
+
+
 
 
 if __name__ == "__main__":
@@ -1077,18 +1088,11 @@ if __name__ == "__main__":
 
     chip = CHIP()
     chip.run()
-    try:
-        
-        pass
 
-    except Exception as e:
-        logging.error(e) 
+    # Move logging file to the location of this current run
+    log_filename = os.path.basename(log_filepath)
+    # Shutdown logging so the file can be put in the storage location
+    logging.shutdown()
 
-    finally:
-        # Move logging file to the location of this current run
-        log_filename = os.path.basename(log_filepath)
-        # Shutdown logging so the file can be put in the storage location
-        logging.shutdown()
-
-        os.rename( log_filepath, 
-                   os.path.join( chip.storage_path, log_filename) )
+    os.rename( log_filepath, 
+                os.path.join( chip.storage_path, log_filename) )
