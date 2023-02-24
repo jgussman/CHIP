@@ -6,15 +6,15 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from matplotlib.ticker import AutoMinorLocator
 import matplotlib.gridspec as gridspec
+import argparse
 
-####< START EDIT SECTION >####
-# Path to folder containing the results of The Cannnon 
-cannon_results_path = "data/chip_runs/2022-12-28_22-13-57/cannon_results/3_0.1_Mean-Error_3"
-####< END EDIT SECTION />####
+parser = argparse.ArgumentParser()
+parser.add_argument("--results_path","-r",help="Path to the results folder",required=True)
 
+args = parser.parse_args()
+cannon_results_path = args.results_path
 
-### </ LOAD SECTION /> ###
-# Load Scaler   
+# Load Scaler
 scaler = joblib.load( os.path.join(cannon_results_path, "standard_scaler.joblib" ))
 # Load y_param 
 y_param = joblib.load( os.path.join(cannon_results_path, "y_param.joblib" ))
@@ -24,12 +24,10 @@ inferred_labels = joblib.load( os.path.join(cannon_results_path, "inferred_label
 inferred_labels = scaler.inverse_transform(inferred_labels) 
 # Load parameter names
 param_names = joblib.load( os.path.join(cannon_results_path, "parameters_names.joblib" ))
-### </ LOAD SECTION /> ###
 
 
-#### < TABLE SECTION > ####
 
-### Over results on SPOCS
+
 rice_std = {"Y/H":0.08,"Ni/H":0.04,"Fe/H":0.03,"Mn/H":0.05,"Cr/H":0.04,"V/H":0.06,"Ti/H":0.04,
 "Ca/H":0.03,"Si/H":0.03,"Al/H":0.04,"Mg/H":0.04,"Na/H":0.05,"O/H":0.07,"N/H":0.08,
 "C/H":0.05,"Teff":56,r"$log g$":0.09,r"V sin i":0.87}
