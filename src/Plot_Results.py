@@ -1,30 +1,35 @@
+import joblib
 import numpy as np
-import matplotlib.pyplot as plt
-# from numpy.core.defchararray import capitalize, index
-# from numpy.core.fromnumeric import size 
+import os 
+import pandas as pd 
+import matplotlib.pyplot as plt 
 from scipy import stats
 from matplotlib.ticker import AutoMinorLocator
-import glob
-# import matplotlib.ticker as ticker
-import pandas as pd 
 import matplotlib.gridspec as gridspec
 
-###
-###Anything BELOW this point (to the stop point) can be editted to work with your needs
-###
-folder_location = "70_20_4" #The folder where results of the best model ended up
-###
-###Anything ABOVE this point (to the start point) can be editted to work with your needs
-###
-
-#metrics = {"Parameter":[],"mu Predicted":[],"std Predicted":[],"mu SPOC":[],"std SPOC":[],"Relative Difference":[]}
-metrics = {"Parameter":[],"mean(Cannon value - SPOCS value)":[]
-                         ,"std(Cannon value - SPOCS value)":[]
-                         ,"Rice std":[]
-                         ,"Brewer std":[]
-                         ,"Relative Difference":[]} 
+####< START EDIT SECTION >####
+# Path to folder containing the results of The Cannnon 
+cannon_results_path = "data/chip_runs/2022-12-28_22-13-57/cannon_results/3_0.1_Mean-Error_3"
+####< END EDIT SECTION />####
 
 
+### </ LOAD SECTION /> ###
+# Load Scaler   
+scaler = joblib.load( os.path.join(cannon_results_path, "standard_scaler.joblib" ))
+# Load y_param 
+y_param = joblib.load( os.path.join(cannon_results_path, "y_param.joblib" ))
+y_param = scaler.inverse_transform(y_param)
+# Load inferred labels 
+inferred_labels = joblib.load( os.path.join(cannon_results_path, "inferred_labels.joblib" ))
+inferred_labels = scaler.inverse_transform(inferred_labels) 
+# Load parameter names
+param_names = joblib.load( os.path.join(cannon_results_path, "parameters_names.joblib" ))
+### </ LOAD SECTION /> ###
+
+
+#### < TABLE SECTION > ####
+
+### Over results on SPOCS
 rice_std = {"Y/H":0.08,"Ni/H":0.04,"Fe/H":0.03,"Mn/H":0.05,"Cr/H":0.04,"V/H":0.06,"Ti/H":0.04,
 "Ca/H":0.03,"Si/H":0.03,"Al/H":0.04,"Mg/H":0.04,"Na/H":0.05,"O/H":0.07,"N/H":0.08,
 "C/H":0.05,"Teff":56,r"$log g$":0.09,r"V sin i":0.87}
@@ -35,88 +40,52 @@ brewer_std = {"Y/H":0.015,"Ni/H":0.006,"Fe/H":0.005,"Mn/H":0.01,"Cr/H":0.007,"V/
 
 
 
+metrics = {"Parameter":[],"mean(Cannon value - SPOCS value)":[]
+                         ,"std(Cannon value - SPOCS value)":[]
+                         ,"Rice std":[]
+                         ,"Brewer std":[]
+                         ,"Relative Difference":[]} 
+
+
+
 
 def Relative_difference(true,preditcted):
     return (true - preditcted) / true
 
-i = 0
-j = 0
-o = 0
-for path in glob.glob(folder_location+"/*.npy"):
-    element = path.split("/")[-1].split("\\")[-1].replace(".npy","")
-    nameWithoutBrackets = element
+# Enumerate over the order of labels
+for param_i, param  in enumerate(param_names):
+    nameWithoutBrackets = param
 
-    #Not elements, thus I dont want to put a /H behind it
-    if element not in ["LOGG","TEFF","VSINI"]:
-        element = '[' + element.replace("H","") + "/H]"
+    #Not params, thus I dont want to put a /H behind it
+    if param not in ["LOGG","TEFF","VSINI"]:
+        param = '[' + param.replace("H","") + "/H]"
     else:
-        if element == "LOGG":
-            element = r"$log g$"
-        elif element == "TEFF":
-            element = r"Teff"
-        elif element == "VSINI":
-            element = r"V sin i"
-    fig = plt.figure(figsize=(9, 9))
+        if param == "LOGG":
+            param = r"$log g$"
+        elif param == "TEFF":
+            param = r"Teff"
+        elif param == "VSINI":
+            param = r"V sin i"
 
-    ax1 = fig.add_subplot()
+    true_data,predicted_data = y_param[:,param_i],inferred_labels[:,param_i]
+    sigma = np.std(predicted_data)
     
-    ax1.set_xlabel("SPOC Value",size=20)
-    ax1.set_ylabel("Predicted Value",size=20)
-    true_data,predicted_data = np.load(path)
-    sigma = np.std(np.load(path)) #Re-dun but idc
-    ax1.set_title(f"{element}, " + r"$\sigma = $" + f"{sigma:.2f}",size=30)
-
-    ax1.scatter(true_data,predicted_data,alpha=0.4,c="dodgerblue",s=80)
-    res = stats.linregress(true_data,predicted_data)
-    
-    minn = min(np.min(true_data),np.min(predicted_data)) - 0.2
-    maxx = max(np.max(true_data),np.max(predicted_data)) + 0.2
-    # Adjust the boundaries to make the plots look nice
-    if element == r"Teff":
-        minn -= 100
-        maxx += 100
-    elif element == r"V sin i":
-        minn -= 1
-        maxx += 1
-
-    ax1.plot([minn,maxx], np.array([minn,maxx]), c= 'crimson', label='Line of Equality')
-    ax1.set_xlim([minn,maxx])
-    ax1.set_ylim([minn,maxx])
-    ax1.tick_params(axis='both',length=10,labelsize=15)
-    
-    #Line of Best Fit
-    m,b = np.polyfit(true_data,predicted_data,1) 
-    ax1.plot([minn,maxx],m*np.array([minn,maxx]) + b,c="grey", label="Linear Best Fit")
-
-    plt.legend()
-    #plt.savefig(folder_location + f"/{nameWithoutBrackets}",dpi=300)
-    #print(nameWithoutBrackets) 
-   
     #Save values for table
-    element = element.replace('[','').replace(']','')
-    metrics["Parameter"].append(element)
+    param = param.replace('[','').replace(']','')
+    metrics["Parameter"].append(param)
     p_mu = np.mean(predicted_data)
     t_mu = np.mean(true_data)
-    # p_std = np.std(predicted_data)
-    # t_std = np.std(true_data)
-
-    # metrics["mu Predicted"].append(p_mu)
-    # metrics["std Predicted"].append(p_std)
-    # metrics["mu SPOC"].append(t_mu)
-    # metrics["std SPOC"].append(t_std)
-    
 
     difference = predicted_data - true_data
 
     metrics["Relative Difference"].append(Relative_difference(t_mu,p_mu))
     metrics["mean(Cannon value - SPOCS value)"].append(np.mean(difference))
     metrics["std(Cannon value - SPOCS value)"].append(np.std(difference))
-    metrics["Rice std"].append(rice_std[element])
-    metrics["Brewer std"].append(brewer_std[element])
+    metrics["Rice std"].append(rice_std[param])
+    metrics["Brewer std"].append(brewer_std[param])
 
 
-    plt.close() #Closes plot 
-
+    
 metrics = pd.DataFrame.from_dict(metrics)
 metrics = np.round(metrics,3)
 
@@ -127,17 +96,14 @@ latex_str = latex_str.replace("Teff", "$T_{\rm eff}$ ")
 latex_str = latex_str.replace("V sin i", "$v \sin i$ ")
 latex_str = latex_str.replace("\$log g\$", "$\log g$")
 
-
+print("\n"*5)
 print(latex_str)
+#### </ TABLE SECTION /> ####
 
 
+#### < PLOT SECTION > ####
 
 ### Only for paper, this will not work for all other datasets. 
-import numpy as np
-import matplotlib.pyplot as plt 
-from scipy import stats
-import glob
-
 fontsize = 50
 i = 0
 j = 0
@@ -146,37 +112,36 @@ gs1 = gridspec.GridSpec(16,8)
 gs1.update(wspace=0.025, hspace=0.05)
 
 o = 0
-for path in glob.glob(folder_location+"/*.npy"):
-    element = path.split("/")[-1].split("\\")[-1].replace(".npy","")
-    nameWithoutBrackets = element
+for param_i, param  in enumerate(param_names):
+    nameWithoutBrackets = param
 
-    #Not elements, thus I dont want to put a /H behind it
-    if element not in ["LOGG","TEFF","VSINI"]:
-        element = '[' + element.replace("H","") + "/H]"
+    #Not params, thus I dont want to put a /H behind it
+    if param not in ["LOGG","TEFF","VSINI"]:
+        param = '[' + param.replace("H","") + "/H]"
     else:
-        if element == "LOGG":
-            element = r"log$g$ $[cm/s^2]$"
-        elif element == "TEFF":
-            element = r"$T_{eff}$ $[K]$"
-        elif element == "VSINI":
-            element = r"$v\sin i$ $[km/s]$"
+        if param == "LOGG":
+            param = r"log$g$ $[cm/s^2]$"
+        elif param == "TEFF":
+            param = r"$T_{eff}$ $[K]$"
+        elif param == "VSINI":
+            param = r"$v\sin i$ $[km/s]$"
 
-    true_data,predicted_data = np.load(path)
-    sigma = np.std(np.load(path)) #Re-dun but idc
-    #axs[i,j].set_title(f"{element}, " + r"$\sigma = $" + f"{sigma:.2f}",size=10) # With Sigma 
-    axs[i,j].set_title(f"{element}",size=10) #Without sigma 
+    true_data,predicted_data = y_param[:,param_i],inferred_labels[:,param_i]
+    sigma = np.std(predicted_data)
+    #axs[i,j].set_title(f"{param}, " + r"$\sigma = $" + f"{sigma:.2f}",size=10) # With Sigma 
+    axs[i,j].set_title(f"{param}",size=10) #Without sigma 
 
     axs[i,j].scatter(true_data,predicted_data,alpha=0.2,c="blue",s=40)
     res = stats.linregress(true_data,predicted_data)
     
-    minn = min(np.min(true_data),np.min(predicted_data)) - 0.1
-    maxx = max(np.max(true_data),np.max(predicted_data)) + 0.1
-    if element == r"$T_{eff}$ $[K]$":
+    minn = min(np.min(true_data),np.min(predicted_data)) - 0.01
+    maxx = max(np.max(true_data),np.max(predicted_data)) + 0.01
+    if param == r"$T_{eff}$ $[K]$":
         minn -= 100
         maxx += 100
-    elif element == r"$V\sin i$ $[km/s]$":
-        minn -= 1
-        maxx += 1
+    elif param == r"$V\sin i$ $[km/s]$":
+        minn -= 0.02
+        maxx += 0.02
     
     
     axs[i,j].plot([minn,maxx], np.array([minn,maxx]), c= 'hotpink', label='One-to-One')
@@ -226,5 +191,5 @@ for path in glob.glob(folder_location+"/*.npy"):
         fig.text(0.503, 0.015, 'SPOCS Label', ha='center', va='center',size=20)
         fig.text(0.011, 0.5, "The Cannon Label", ha='center', va='center', rotation='vertical',size=20)
         #plt.tight_layout()
-        plt.savefig(f"{folder_location}/All_in_one.png",dpi=300)
+        plt.savefig(f"{cannon_results_path}/All_in_one.png",dpi=300)
         plt.show()
