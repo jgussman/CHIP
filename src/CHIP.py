@@ -736,7 +736,7 @@ class CHIP:
 
         if save:
             # Save inferred labels
-            joblib.dump(inferred_labels, os.path.join(self.storage_path,'inferred_labels.npy'))
+            joblib.dump(inferred_labels, os.path.join(self.storage_path,'inferred_labels.joblib'))
 
 
         return self.cost_function(true_labels, inferred_labels)
