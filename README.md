@@ -1,54 +1,43 @@
 # The Cannon HIRES Iodine Pipeline (CHIP)
----
 
-## Overview 
+
 ---
+## Overview 
+
 
 The CHIP pipeline is designed to extract stellar parameters from iodine-imprinted radial velocity spectra obtained with the HIRES instrument. To accomplish this, CHIP:
 - Downloads deblazed spectra from [The Keck Observatory Archive (KOA)](https://koa.ipac.caltech.edu/UserGuide/about.html)
 - Prepares the spectra to be used for training of [The Cannon](https://annayqho.github.io/TheCannon/intro.html)
-- "Learns" patterns in the input dataset by optimizing a set of model hyperparameters with The Cannon 
-- Plots the results extracted from the best-fitting model
 
 
+---
 ## Dependencies
+
+
+- To be able to access Keck/HIRES data, you will need a KOA (Keck Observatory Archive) account. To obtain this account, you can submit a ticket by following the link provided [here](https://koa.ipac.caltech.edu/cgi-bin/Helpdesk/nph-genTicketForm?projname=KOA).
+
+- To use CHIP with Python, you will need to set up a Python environment with the necessary dependencies installed. We recommend using [Anaconda 3](https://www.anaconda.com) to manage your Python environment.
+
 ---
-
-To access the input Keck/HIRES data, you must have a KOA account. To request an account, submit a ticket [here](https://koa.ipac.caltech.edu/cgi-bin/Helpdesk/nph-genTicketForm?projname=KOA).
-
-To set up the environment required to use CHIP, you will need [Anaconda 3](https://www.anaconda.com).
-
-
 ## Installation
----
 
-### Step 1
+1. Clone this repository by entering the following into your terminal:
 
-Clone this repository by entering the following into your terminal:
+   ```git clone https://github.com/jgussman/CHIP```
 
-```git clone https://github.com/jgussman/CHIP```
+2. Set up the environment required to use CHIP, using [Anaconda 3](https://www.anaconda.com).
 
-### Step 2
-Set up the environment required to use CHIP, using [Anaconda 3](https://www.anaconda.com).
+    ```conda create env```
 
-```conda create --name chip python=3.8.5```
 
-```conda activate chip``` 
+3. (Windows Users Only) 
 
-```cd CHIP```
+    If you are using a Windows machine, you **need** to download [geos_c.dll](https://www.dll-files.com/geos_c.dll.html) and move the file to the CHIP python environment's Library/bin folder. You can read more about this problem [here](https://github.com/Toblerity/Shapely/pull/1108).
 
-```pip3 install -r requirements.txt```
-
-### Step 2.5 (Windows Users Only)
-
-If you are using a Windows machine, you need to download [geos_c.dll](https://www.dll-files.com/geos_c.dll.html) and move the file to the CHIP python environment's Library/bin folder. You can read more about this problem [here](https://github.com/Toblerity/Shapely/pull/1108).
-
-### Step 3
-You're now ready to run CHIP! Inside the [src](https://github.com/jgussman/CHIP/blob/updated/src/README.md) directory, you will find another README file with details about how to run CHIP.
+4. You're now ready to run CHIP! Inside the src directory, you will find another [README](https://github.com/jgussman/CHIP/blob/main/src/README.md) with details about how to run CHIP.
 
 
 ---
-# Contact Info
---- 
+### Contact Info
 
 Email: judegussman@gmail.com.
