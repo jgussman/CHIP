@@ -26,8 +26,8 @@ from TheCannon import dataset, model
 
 
 class CHIP:
-    chip_version = "v1.0.0"
-    thecannon_version = "v0.5.0"
+    chip_version = "v1.0.1"
+    thecannon_version = "v1.0.0"
 
     def __init__(self):
         '''
@@ -59,7 +59,7 @@ class CHIP:
         # If we are running preprocessing then we want a new 
         # CHIP run sub dir else we are running The Cannon
         # and want to use a previous run 
-        if self.config["CHIP"]["run"]["val"]:
+        if self.config["Preprocessing"]["run"]["val"]:
             # Create a new storage location for this pipeline
             # Greenwich Mean Time (UTC) right now 
             gmt_datetime = time.strftime("%Y-%m-%d_%H-%M-%S",time.gmtime())
@@ -71,22 +71,22 @@ class CHIP:
 
         else:
             # What chip run is going to be used
-            chip_run_subdir = self.config["The Cannon"]["run"]["val"]
+            chip_run_subdir = self.config["Training"]["run"]["val"]
             self.data_dir_path = os.path.join("data/chip_runs",chip_run_subdir)
 
             if not(os.path.exists(self.data_dir_path)):
-                logging.error(f'Your inputed sub dir name for ["The Cannon"]["run"]["val"] does not exist. {self.data_dir_path}')
+                logging.error(f'Your inputed sub dir name for ["Training"]["run"]["val"] does not exist. {self.data_dir_path}')
             
             # Make The Cannon Results dir 
             # semi-unique subdir naming convention
             # random seed _ testing fraction _ validation fraction _ cost function name (spaces filled with -)
-            rand_seed = self.config["The Cannon"]["random seed"]["val"]
-            test_frac = self.config["The Cannon"]["train test split"]["val"]
-            cost_fun  = self.config["The Cannon"]["cost function"]["name"].replace(" ", "-")
-            k_fold    = self.config["The Cannon"]["kfolds"]["val"]
+            rand_seed = self.config["Training"]["random seed"]["val"]
+            test_frac = self.config["Training"]["train test split"]["val"]
+            cost_fun  = self.config["Training"]["cost function"]["name"].replace(" ", "-")
+            k_fold    = self.config["Training"]["kfolds"]["val"]
             semi_unique_subdir = f"{rand_seed}_{test_frac}_{cost_fun}_{k_fold}"
             
-            self.storage_path = os.path.join( self.data_dir_path, "cannon_results", semi_unique_subdir )
+            self.storage_path = os.path.join( self.data_dir_path, "training_results", semi_unique_subdir )
             
         os.makedirs( self.storage_path, exist_ok= True )
 
@@ -99,7 +99,7 @@ class CHIP:
         Outputs: None
         '''
         
-        if self.config["CHIP"]["run"]["val"]:
+        if self.config["Preprocessing"]["run"]["val"]:
             logging.info(f"CHIP {self.chip_version}")
 
             # Record results 
@@ -108,7 +108,7 @@ class CHIP:
                                 "No Clue":[],"Nan in IVAR":[],
                                 "Normalization error":[]}
 
-            if isinstance(self.config["CHIP"]["run"]["val"],bool):
+            if isinstance(self.config["Preprocessing"]["run"]["val"],bool):
 
                 self.download_spectra()
 
@@ -119,7 +119,7 @@ class CHIP:
                 self.interpolate()
 
             else:
-                past_run, data_folder = self.config["CHIP"]["run"]["val"][0], self.config["CHIP"]["run"]["val"][1]
+                past_run, data_folder = self.config["Preprocessing"]["run"]["val"][0], self.config["Preprocessing"]["run"]["val"][1]
                 logging.info(f"Using the past run {past_run}'s {data_folder}")
 
                 past_run_path = os.path.join(os.path.dirname(self.storage_path), past_run)
@@ -152,7 +152,7 @@ class CHIP:
                     logging.error(f"The past run {past_run} does not exist! We are looking at {past_run_path}")
                     
     
-        elif self.config["The Cannon"]["run"]["val"]:
+        elif self.config["Training"]["run"]["val"]:
             logging.info(f"The Cannon {self.thecannon_version}")
     
 
@@ -193,23 +193,25 @@ class CHIP:
         with open("src/config.json", "r") as f:
             self.config = json.load(f)
         
-        self.cores = self.config["CHIP"]["cores"]["val"]
-        self.trim  = self.config["CHIP"]["trim_spectrum"]["val"]
+        self.cores = self.config["Preprocessing"]["cores"]["val"]
+        self.trim  = self.config["Preprocessing"]["trim_spectrum"]["val"]
         logging.info( f"config.json : {self.config}" )
     
 
     @staticmethod
-    def calculate_SNR(spectrum):
-        ''' Calculates the SNR of spectrum using the 8th and 9th echelle orders
+    def calculate_SNR(spectrum, gain = 2.09):
+        ''' Calculates the SNR of spectrum using the 5th echelle orders
 
-        Inputs: spectrum (np.array) - spectrum with at least 9 rows representing echelle orders 
+        Inputs: spectrum (np.array) - spectrum with at least 5 rows representing echelle orders 
+                gain (float) - gain of the detector
 
         Outputs: (float) estimated SNR of inputed spectrum
         '''
         logging.debug(f"CHIP.calculate_SNR( {spectrum} )")
 
-        spectrum = spectrum[7:10].flatten() # Using echelle orders in the middle 
-        SNR = np.mean(np.sqrt(spectrum))
+        spectrum = spectrum[4].flatten() # Using echelle orders in the middle 
+        SNR = np.sqrt(np.median(spectrum * gain))
+        
         return SNR 
 
 
@@ -230,7 +232,7 @@ class CHIP:
 
 
     def download_spectrum(self,filename,SNR = True, past_rv_obs_path = False):
-        '''Download Individual Spectrum and ivar 
+        '''Download Individual Spectrum and calculate the ivar 
 
         Input: filename (str): HIRES file name of spectrum you want to download
             SNR (bool): if you want to calculate the SNR of the spectrum 
@@ -302,7 +304,7 @@ class CHIP:
         start_time = time.perf_counter()
 
         # Cross matched names 
-        cross_matched_file_path = self.config["CHIP"]["cross_match_stars"]["val"]
+        cross_matched_file_path = self.config["Preprocessing"]["cross_match_stars"]["val"]
         cross_matched_df = pd.read_csv( cross_matched_file_path, sep=" " )
         hires_names_array = cross_matched_df["HIRES"].to_numpy()
 
@@ -626,7 +628,7 @@ class CHIP:
         '''
         logging.info("CHIP.load_the_cannon( )") 
 
-        self.random_seed = self.config["The Cannon"]["random seed"]["val"]
+        self.random_seed = self.config["Training"]["random seed"]["val"]
 
         interpolated_dir_path = os.path.join(self.data_dir_path, "inter")
 
@@ -651,7 +653,7 @@ class CHIP:
         logging.info(f"A total of {len(self.spectraDic)} stars were loaded.")
 
         # Load parameters 
-        self.parameters_list = self.config["The Cannon"]["stellar parameters"]["val"]
+        self.parameters_list = self.config["Training"]["stellar parameters"]["val"]
         hiresid_parameters_list = ["HIRESID"] + self.parameters_list
         self.parameters_df = pd.read_csv("data/spocs/stellar_parameters.csv")[ hiresid_parameters_list ]
         # Extract only the stars that were preprocessed 
@@ -671,9 +673,9 @@ class CHIP:
         self.cannon_splits(self.parameters_df)
 
         # load cost function 
-        self.cost_function = eval(self.config["The Cannon"]["cost function"]["function"])
+        self.cost_function = eval(self.config["Training"]["cost function"]["function"])
         # Load masks 
-        masks_list = self.config["The Cannon"]["masks"]["val"]
+        masks_list = self.config["Training"]["masks"]["val"]
         self.masks = {mask_name: self.create_mask_array(mask_path) for mask_name, mask_path in masks_list}
 
 
@@ -962,7 +964,7 @@ class CHIP:
         logging.debug("CHIP.cannon_splits( )")
 
         # Split the parameters into a training set, a test set, and a validation set
-        test_frac = self.config["The Cannon"]["train test split"]["val"]
+        test_frac = self.config["Training"]["train test split"]["val"]
         self.train_parameter, self.test_parameter = train_test_split(parameters_df, test_size = test_frac, random_state= self.random_seed)
 
         # Split the spectra and ivars 
@@ -982,7 +984,7 @@ class CHIP:
         del self.ivarDic
 
         # Create a KFold object for preforming k-fold cross validation  
-        num_folds = self.config["The Cannon"]["kfolds"]["val"]
+        num_folds = self.config["Training"]["kfolds"]["val"]
         kf = KFold(n_splits=num_folds, shuffle=True, random_state=self.random_seed)
         # So repeated call doesn't need to be made to kf every time. 
         self.kfold_train_validation_splits = list(kf.split(self.train_id)) #np.vstack(kf.split(self.train_spectra))
@@ -1000,9 +1002,9 @@ class CHIP:
 
         # Get the hyperparameters to tune
         # batch size is the number of spectra to train on at a time (list) 
-        batch_size = self.config["The Cannon"]["batch size"]["val"]
+        batch_size = self.config["Training"]["batch size"]["val"]
         # poly_order is the degree of the polynomial to fit (list)
-        poly_order = self.config["The Cannon"]["poly order"]["val"]
+        poly_order = self.config["Training"]["poly order"]["val"]
 
         # Create a list of all the hyperparameters to tune
         hyperparameters = [batch_size, poly_order, self.masks]
@@ -1015,7 +1017,7 @@ class CHIP:
         logging.info("hyperparameter combinations" + str(hyperparameter_combinations))
 
         # Use joblib to parallelize the hyperparameter tuning
-        num_cores = self.config["The Cannon"]["cores"]["val"]
+        num_cores = self.config["Training"]["cores"]["val"]
         results = Parallel(n_jobs=num_cores)\
                           (delayed(self.train_model)\
                           (hyperparameter_combination[0],hyperparameter_combination[1],hyperparameter_combination[2]) for hyperparameter_combination in hyperparameter_combinations)
