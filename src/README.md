@@ -1,6 +1,64 @@
-# Tutorial 
+# CHIP Tutorial 
+
 
 ---
+## Reproduce Results
+
+If you would like to reproduce the results of the paper use the following parameters... *****UPDATE AFTER FINAL RESULTS COME IN
+
+--- 
+
+## Quick-start Tutorial
+
+To ensure that CHIP is set up correctly, you can run the preconfigured config.json file. First, activate the *chip* conda environment and make sure that the current working directory is the root directory of CHIP. Then, execute the following command in the terminal: `python src/CHIP.py`. After a few seconds, you will be prompted to enter your KOA user credentials.
+
+
+After you initiate the preprocessing step in the CHIP Python environment, you can find a new subdirectory in the "data" directory named "chip_runs". Each subdirectory inside "chip_runs" represents a different run instance, and is named after the GMST (Greenwich Mean Sidereal Time) you started the preprocessing step, using the format: YYYY-MM-DD_HH_mm_SS. You should take note of the name of the newest directory, which will be the most recent preprocessing run instance.
+
+After preprocessing is complete, open the config.json file and change two arguments. 
+
+First, change the "Preprocessing" run argument's value from true to false. It should look like this:
+    ```
+    "Preprocessing": {
+
+        "description": "Arguments for preprocessing.",
+    
+        "run" : { 
+            "val": false,
+            "description": "Do you want to run CHIP (true/false)? If you want to use data from a past run, you need to specify the run's name and what data you want to use from that folder ex: [2022-12-28_22-13-57, rv_obs]."
+        },
+    ```
+
+Second, change the Training run argument's value from false to the name of the newest directory you noted earlier. It should look similar to this:
+
+    ```
+    "Training":{
+    
+    "description": "Arguments for training.",
+
+    "run" : { 
+        "val": "YYYY-MM-DD_HH_mm_SS",
+        "description": "If you want to run The Cannon set val to the name of the dir inside data/chip_runs you want to use (ex: 2022-12-28_22-13-57). Otherwise set to false."
+    },
+    ```
+
+Now to begin training, `python src/CHIP.py`. The results of training will end up in a subdir called training_results in the YYYY-MM-DD_HH_mm_SS directory. 
+
+
+
+
+---
+## Adjust to your own dataset
+
+CHIP is divided into two steps: 
+ - The Preprocessing Step
+ - The Training Step 
+
+
+
+To customize CHIP to your particular dataset you'll primarily be using the [config.json](config.json).  
+
+
 The config.json file contains settings for two pipeline stages: CHIP and The Cannon.
 
 For the CHIP stage, users can specify whether to run it, the path to the cross-match names file, the number of pixels to remove from the left and right edges of each echelle order, and the number of cores to use.
@@ -11,7 +69,7 @@ Users should modify the values of the "val" keys to adjust these settings accord
 ---
 
 
-## How-To
+### How-To
 
 
 1. Get a file with at least one column named "HIRES". The values in this column are the IDs of the stars you want to use from the KOA. The other column must have matching IDs to that of the ID columns in stellar_parameter.csv. An example of this is [starnames_crossmatch_SPOCS_NEXSCI.txt](https://github.com/jgussman/CHIP/blob/updated/data/spocs/starnames_crossmatch_SPOCS_NEXSCI.txt). 
@@ -107,7 +165,7 @@ Users should modify the values of the "val" keys to adjust these settings accord
             "function" : "lambda true_array,predicted_array:  np.mean( true_array - predicted_array )",
             "description" : "A lambda function and associated name of function, for computing the cost of a model."
         },
-
+ 
         "masks" : {
             "val" : [["Iodine","data/constants/masks/by_eye_iodine_mask.npy"], ["None",false]],
             "description" : "List of masks to apply to all stars; for example: [['Name of Mask','file path to mask'],...,['None',False]]; shape of mask = (data/spocs/wl_solution.npy.shape[0],)"
@@ -135,3 +193,9 @@ Users should modify the values of the "val" keys to adjust these settings accord
 ```
 
 6. The results of The Cannon will be stored in a subfolder called "cannon_results" in the same run folder you specified in the config file.
+
+
+
+---
+
+## Reproduce Results from Paper
