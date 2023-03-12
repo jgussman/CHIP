@@ -27,7 +27,7 @@ The CHIP pipeline is designed to extract stellar parameters from iodine-imprinte
 
 2. Set up the environment required to use CHIP, using [Anaconda 3](https://www.anaconda.com).
 
-    ```conda create env```
+    ```conda env create```
 
 
 3. (Windows Users Only) 
