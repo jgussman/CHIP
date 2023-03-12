@@ -1,4 +1,4 @@
-name: DELETE
+name: chip
 channels:
   - conda-forge
 dependencies:
