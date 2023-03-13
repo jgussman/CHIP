@@ -1,8 +1,8 @@
 {   
  
-    "CHIP": {
+    "Preprocessing": {
 
-        "description": "Arguments for preprocessing pipeline",
+        "description": "Arguments for preprocessing.",
     
         "run" : { 
             "val": true,
@@ -10,8 +10,8 @@
         },
         
         "cross_match_stars" : {
-            "val": "data/spocs/starnames_crossmatch_SPOCS_NEXSCI.txt",
-            "description": "../SPOCSdata/starnames_crossmatch_SPOCS_NEXSCI.txt, ../SPOCSdata/testStars.txt Cross Match Names file path ---> this txt file must have two columns seperated by a space with headers, one of the columns will the names of the stars in the catalogue you want. The other column must have the column name as 'HIRES' and contain the names of the HIRES identification for the stars."
+            "val": "data/spocs/tutorialStars.txt",
+            "description": "Cross Match Names file path ---> this txt file must have two columns seperated by a space with headers, one of the columns will the names of the stars in the catalogue you want. The other column must have the column name as 'HIRES' and contain the names of the HIRES identification for the stars. Ex: data/spocs/starnames_crossmatch_SPOCS_NEXSCI.txt"
         },
 
         "trim_spectrum" : {
@@ -24,15 +24,25 @@
             "description": "How many cores on your machine would you like to use? -1 for all."
         }
 
-    },
+    }, 
 
-    "The Cannon":{
+    "Training":{
         
-        "description": "Arguments for The Cannon",
+        "description": "Arguments for training.",
 
         "run" : { 
             "val": false,
             "description": "If you want to run The Cannon set val to the name of the dir inside data/chip_runs you want to use (ex: 2022-12-28_22-13-57). Otherwise set to false."
+        },
+
+        "stellar parameters path" : {
+            "val": "data/spocs/stellar_parameters.csv",
+            "description": "Path to the stellar parameters file. The file must have a column named 'HIRESID' with the same names as the cross match stars file."
+        },
+
+        "stellar parameters" : {
+            "val": ["TEFF"],
+            "description": "A list of the stellar parameters you want to train The Cannon on. The names need to reflect the spelling in stellar parameters path"
         },
 
         "cores" : { 
@@ -50,11 +60,6 @@
             "description": "what fraction of the data set do you want to use for testing (ex: 0.4, 60% of the data set will be used for training, and 40% will be used for testing the best model)"
         },
 
-        "stellar parameters" : {
-            "val": ["TEFF","LOGG","VSINI","CH","NH","OH","NaH","MgH","AlH","SiH","CaH","TiH","VH","CrH","MnH","FeH","NiH","YH"],
-            "description": "A list of the stellar parameters you want to train The Cannon on. The names need to reflect the spelling in data/spocs/stellar_parameters.csv."
-        },
-
         "cost function" : {
             "name": "Mean Error",
             "function" : "lambda true_array,predicted_array:  np.mean( true_array - predicted_array )",
@@ -62,22 +67,27 @@
         },
 
         "masks" : {
-            "val" : [["Iodine","data/Constants/Masks/by_eye_iodine_mask.npy"], ["None",false]],
+            "val" : [ ["None",false]],
             "description" : "List of masks to apply to all stars; for example: [['Name of Mask','file path to mask'],...,['None',False]]; shape of mask = (data/spocs/wl_solution.npy.shape[0],)"
+        },
+
+        "epochs" : {
+            "val" : 1,
+            "description" : "number of epochs to train the model for"
         },
         
         "kfolds" : {
-            "val" : 3,
+            "val" : 2,
             "description" : "number of folds for kfold cross validation"
         },
 
         "batch size" : {
-            "val" : [1000],
+            "val" : [4],
             "description" : "number of batches to split the training set into for mini-batch training"
         },
 
         "poly order" : {
-            "val" : [1,2],
+            "val" : [2],
             "description" : "What degree polynomials do you want The Cannon to try to fit to the data? ex: [1,2]"
         }
 
