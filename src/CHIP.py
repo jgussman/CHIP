@@ -7,6 +7,7 @@ import pandas as pd
 import shutil
 import time 
 import itertools 
+import sys
 
 
 from alpha_shapes import contfit_alpha_hull
@@ -482,7 +483,7 @@ class CHIP:
         numOfEdgesToSkip = 100
 
         # Load in stellar data
-        solar = np.load('data/constants/solarAtlas.npy')
+        solar = np.load('data/Constants/solarAtlas.npy')
         sun_wvlen = solar[:,1][::-1]
         sun_flux = solar[:,4][::-1]
 
@@ -655,7 +656,11 @@ class CHIP:
         # Load parameters 
         self.parameters_list = self.config["Training"]["stellar parameters"]["val"]
         hiresid_parameters_list = ["HIRESID"] + self.parameters_list
-        self.parameters_df = pd.read_csv("data/spocs/stellar_parameters.csv")[ hiresid_parameters_list ]
+        stellar_parameters_path = self.config["Training"]["stellar parameters path"]["val"]
+        if not os.path.exists( stellar_parameters_path ):
+            logging.info(f"stellar parameters path {stellar_parameters_path} does not exist")
+            sys.exit(1)
+        self.parameters_df = pd.read_csv(stellar_parameters_path)[ hiresid_parameters_list ]
         # Extract only the stars that were preprocessed 
         self.parameters_df = self.parameters_df[self.parameters_df["HIRESID"].isin( cross_match_array[:,0] )]
 
