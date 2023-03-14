@@ -21,3 +21,4 @@ dependencies:
     - TheCannon==0.7.3
     - pickle-mixin==1.0.2
     - lxml==4.9.1
+    - shapely==1.7.1
