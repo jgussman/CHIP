@@ -56,7 +56,7 @@
         },
 
         "train test split" :{
-            "val": 0.1,
+            "val": 0.4,
             "description": "what fraction of the data set do you want to use for testing (ex: 0.4, 60% of the data set will be used for training, and 40% will be used for testing the best model)"
         },
 
