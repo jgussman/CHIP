@@ -1,16 +1,10 @@
 # CHIP Tutorial 
 
-
----
-## Reproduce Results
-
-If you would like to reproduce the results of the paper use the following parameters... *****UPDATE AFTER FINAL RESULTS COME IN
-
 --- 
 
 ## Quick-start Tutorial
 
-To ensure that CHIP is set up correctly, you can run the preconfigured config.json file. First, activate the *chip* conda environment and make sure that the current working directory is the root directory of CHIP. Then, execute the following command in the terminal: `python src/CHIP.py`. After a few seconds, you will be prompted to enter your KOA user credentials.
+To ensure that CHIP is set up correctly, you can run the preconfigured config.json file. First, activate the *chip* conda environment with `conda activate chip` and make sure that the current working directory is the root directory of CHIP. Then, execute the following command in the terminal: `python src/CHIP.py`. After a few seconds, you will be prompted to enter your KOA user credentials.
 
 
 After you initiate the preprocessing step in the CHIP Python environment, you can find a new subdirectory in the "data" directory named "chip_runs". Each subdirectory inside "chip_runs" represents a different run instance, and is named after the GMST (Greenwich Mean Sidereal Time) you started the preprocessing step, using the format: YYYY-MM-DD_HH_mm_SS. You should take note of the name of the newest directory, which will be the most recent preprocessing run instance.
@@ -18,7 +12,8 @@ After you initiate the preprocessing step in the CHIP Python environment, you ca
 After preprocessing is complete, open the config.json file and change two arguments. 
 
 First, change the "Preprocessing" run argument's value from true to false. It should look like this:
-    ```
+
+```
     "Preprocessing": {
 
         "description": "Arguments for preprocessing.",
@@ -27,22 +22,41 @@ First, change the "Preprocessing" run argument's value from true to false. It sh
             "val": false,
             "description": "Do you want to run CHIP (true/false)? If you want to use data from a past run, you need to specify the run's name and what data you want to use from that folder ex: [2022-12-28_22-13-57, rv_obs]."
         },
-    ```
+```
 
 Second, change the Training run argument's value from false to the name of the newest directory you noted earlier. It should look similar to this:
 
-    ```
+```
     "Training":{
     
-    "description": "Arguments for training.",
+        "description": "Arguments for training.",
 
-    "run" : { 
-        "val": "YYYY-MM-DD_HH_mm_SS",
-        "description": "If you want to run The Cannon set val to the name of the dir inside data/chip_runs you want to use (ex: 2022-12-28_22-13-57). Otherwise set to false."
-    },
-    ```
+        "run" : { 
+            "val": "YYYY-MM-DD_HH_mm_SS",
+            "description": "If you want to run The Cannon set val to the name of the dir inside data/chip_runs you want to use (ex: 2022-12-28_22-13-57). Otherwise set to false."
+        },
+```
 
 Now to begin training, `python src/CHIP.py`. The results of training will end up in a subdir called training_results in the YYYY-MM-DD_HH_mm_SS directory. 
+
+
+When the training completes you will be able to find a new directory inside the YYYY-MM-DD_HH_mm_SS directory called "training_results". The directory naming convention inside "training_results" is "\<random seed integer>\_\<test fraction>\_\<cost function name>\_<# of k-folds>" which are the parameters set in config.json. In this quick-start tutorial you will find a directory called "3_0.4_Mean Error_2". 
+
+Inside 3_0.4_Mean Error_2 you'll be able to find 7 files:
+
+- CHIP.log : Contains the logs during this training run. Particularly the second to last line of the file tells you the bet parameters for The Cannon model for your dataset. 
+
+- best_model.joblib : TheCannon.model object containing the "best" trained model.
+
+- ds.joblib : TheCannon.dataset object used to train the best model.
+
+- inferred_labels.joblib : A numpy array containing the best model's predictions of the test stars in ds.joblib 
+
+- y_param.joblib : A numpy array containing the "true" parameter values of the test stars in ds.joblib.
+
+- parameters_names.joblib : A list containing the parameter names 
+
+- standard_scaler.joblib : A sklearn.preprocessing.StandardScaler object used to scale all the parameter values. 
 
 
 
@@ -56,17 +70,20 @@ CHIP is divided into two steps:
 
 
 
-To customize CHIP to your particular dataset you'll primarily be using the [config.json](config.json).  
+To customize CHIP to your particular dataset you'll primarily be using the [config.json](config.json). The config.json file contains settings for two pipeline stages: preprocessing and training.
 
-
-The config.json file contains settings for two pipeline stages: CHIP and The Cannon.
-
-For the CHIP stage, users can specify whether to run it, the path to the cross-match names file, the number of pixels to remove from the left and right edges of each echelle order, and the number of cores to use.
+For the preprocessing stage, users can specify whether to run it, the path to the cross-match names file, the number of pixels to remove from the left and right edges of each echelle order, and the number of cores to use.
 
 For The Cannon stage, users can specify the run name, the number of cores to use, the random seed, the train-test split fraction, the stellar parameters to use, the cost function to use, any masks to apply, the number of folds for k-fold cross-validation, the batch size, and the polynomial order.
 
 Users should modify the values of the "val" keys to adjust these settings according to their needs. The "description" keys provide further information on what each setting does.
 ---
+
+
+---
+## Reproduce Results
+
+If you would like to reproduce the results of the paper use the following parameters... *****UPDATE AFTER FINAL RESULTS COME IN
 
 
 ### How-To
