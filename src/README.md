@@ -1,5 +1,11 @@
 # CHIP Tutorial 
 
+---
+## Table of Contents
+ - [Quick-start Tutorial](#quick-start-tutorial)
+ - [Use your own dataset](#use-your-own-dataset)
+ - [Reproduce Results](#reproduce-results)
+
 --- 
 
 ## Quick-start Tutorial
