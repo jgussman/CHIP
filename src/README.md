@@ -210,13 +210,13 @@ Users should modify the values of the "val" keys to adjust these settings accord
 
 2. Next you will want to configure the "Preprocessing" section of [config.json](config.json). 
 
-3. Once configured, run the following commands in your anaconda prompt `conda activate chip` then while you are in the root directory of the CHIP run `python src/CHIP.py` 
+3. Once configured, run `conda activate chip` to activate your anaconda environment. 
 
-4. Once the previous step is completed, you can look in `data/chip_runs` folder to find the results of preprocessing (described in more detail in the quick-start tutorial).  
+4. Then, from the root directory of CHIP, run `python src/CHIP.py` to complete the pre-processing step. The results of the pre-processing will be located in the `data/chip_runs` directory (described in more detail in the quick-start tutorial).  
 
 5. You must have a file that contains the parameter values of the stars you would like to train the models on. The first column must be an identifier and the IDs MUST match up with the non-HIRES column in. Example: [stellar_parameter.csv](../data/spocs/stellar_parameters.csv)
 
-6. To train, make the following changes to `src/config.json`, make sure you change the training's run parameter to your specific run folder name. And that the Preprcoessing run val is set to `false`. Then you are ready to train `python src/CHIP.py`.
+6. To train, set the `run` parameter in the `Training` section of `src/config.json` to your specific run folder name. Make sure that the `run` parameter in the `Preprcoessing` section of `src/config.json` is set to `false`. Then, you are ready to train your model by running `python src/CHIP.py` from the root directory of CHIP.
 ---
 ---
 
