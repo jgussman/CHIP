@@ -43,24 +43,21 @@ Second, change the Training run argument's value from false to the name of the n
         },
 ```
 
-Now to begin training, `python src/CHIP.py`. The results of training will end up in a subdir called training_results in the YYYY-MM-DD_HH_mm_SS directory. 
-
-
-When the training completes you will be able to find a new directory inside the YYYY-MM-DD_HH_mm_SS directory called "training_results". The directory naming convention inside "training_results" is "\<random seed integer>\_\<test fraction>\_\<cost function name>\_<# of k-folds>" which are the parameters set in config.json. In this quick-start tutorial you will find a directory called "3_0.4_Mean Error_2". 
+Now to begin training, run `python src/CHIP.py` from the main CHIP directory. When the training completes, a new subdirectory called "training_results" will be created inside the YYYY-MM-DD_HH_mm_SS directory. The directory naming convention inside "training_results" is "\<random seed integer>\_\<test fraction>\_\<cost function name>\_<# of k-folds>", where the variables are the parameters set in config.json. In this quick-start tutorial, you will find a directory called "3_0.4_Mean Error_2". 
 
 Inside 3_0.4_Mean Error_2 you'll be able to find 7 files:
 
-- CHIP.log : Contains the logs during this training run. Particularly the second to last line of the file tells you the bet parameters for The Cannon model for your dataset. 
+- CHIP.log : Contains the logs during this training run. The second-to-last line of the log file tells you the best-fit parameters for The Cannon model for your dataset. 
 
 - best_model.joblib : [TheCannon.model object](https://annayqho.github.io/TheCannon/_modules/TheCannon/model.html) containing the "best" trained model.
 
 - ds.joblib : [TheCannon.dataset object](https://annayqho.github.io/TheCannon/api.html#TheCannon.dataset.Dataset) used to train the best model.
 
-- inferred_labels.joblib : A numpy array containing the best model's predictions of the test stars in ds.joblib 
+- inferred_labels.joblib : A numpy array containing the best model's parameter predictions for the test stars in ds.joblib 
 
 - y_param.joblib : A numpy array containing the "true" parameter values of the test stars in ds.joblib.
 
-- parameters_names.joblib : A list containing the parameter names 
+- parameters_names.joblib : A list containing the parameter names.
 
 - standard_scaler.joblib : A sklearn.preprocessing.StandardScaler object used to scale all the parameter values. 
 
@@ -76,15 +73,15 @@ model.infer_labels( <TheCannon.dataset object> )
 inferred_labels = ds.test_label_vals
 ```
 
-That concludes the the quick-start tutorial. 
+That concludes the quick-start tutorial. 
 
 ---
 ---
 ## Use your own dataset
 
-We assume you have followed the quick-start tutorial, before you try your own dataset. 
+If you'd now like to apply CHIP to your own dataset, CHIP also allows you to specify stars and spectra on which your model will be trained. We assume in this tutorial that you have followed the quick-start tutorial before trying your own dataset. 
 
-To customize CHIP to your particular dataset you'll primarily be using the [config.json](config.json). The config.json file contains settings for two pipeline stages: preprocessing and training.
+To customize CHIP to your dataset, you will primarily adjust the [config.json](config.json) file. This file contains settings for two pipeline stages: preprocessing and training.
 
 
 The preprocessing arguments are at the top of the config file: 
