@@ -43,24 +43,21 @@ Second, change the Training run argument's value from false to the name of the n
         },
 ```
 
-Now to begin training, `python src/CHIP.py`. The results of training will end up in a subdir called training_results in the YYYY-MM-DD_HH_mm_SS directory. 
-
-
-When the training completes you will be able to find a new directory inside the YYYY-MM-DD_HH_mm_SS directory called "training_results". The directory naming convention inside "training_results" is "\<random seed integer>\_\<test fraction>\_\<cost function name>\_<# of k-folds>" which are the parameters set in config.json. In this quick-start tutorial you will find a directory called "3_0.4_Mean Error_2". 
+Now to begin training, run `python src/CHIP.py` from the main CHIP directory. When the training completes, a new subdirectory called "training_results" will be created inside the YYYY-MM-DD_HH_mm_SS directory. The directory naming convention inside "training_results" is "\<random seed integer>\_\<test fraction>\_\<cost function name>\_<# of k-folds>", where the variables are the parameters set in config.json. In this quick-start tutorial, you will find a directory called "3_0.4_Mean Error_2". 
 
 Inside 3_0.4_Mean Error_2 you'll be able to find 7 files:
 
-- CHIP.log : Contains the logs during this training run. Particularly the second to last line of the file tells you the bet parameters for The Cannon model for your dataset. 
+- CHIP.log : Contains the logs during this training run. The second-to-last line of the log file tells you the best-fit parameters for The Cannon model for your dataset. 
 
 - best_model.joblib : [TheCannon.model object](https://annayqho.github.io/TheCannon/_modules/TheCannon/model.html) containing the "best" trained model.
 
 - ds.joblib : [TheCannon.dataset object](https://annayqho.github.io/TheCannon/api.html#TheCannon.dataset.Dataset) used to train the best model.
 
-- inferred_labels.joblib : A numpy array containing the best model's predictions of the test stars in ds.joblib 
+- inferred_labels.joblib : A numpy array containing the best model's parameter predictions for the test stars in ds.joblib 
 
 - y_param.joblib : A numpy array containing the "true" parameter values of the test stars in ds.joblib.
 
-- parameters_names.joblib : A list containing the parameter names 
+- parameters_names.joblib : A list containing the parameter names.
 
 - standard_scaler.joblib : A sklearn.preprocessing.StandardScaler object used to scale all the parameter values. 
 
@@ -76,15 +73,15 @@ model.infer_labels( <TheCannon.dataset object> )
 inferred_labels = ds.test_label_vals
 ```
 
-That concludes the the quick-start tutorial. 
+That concludes the quick-start tutorial. 
 
 ---
 ---
 ## Use your own dataset
 
-We assume you have followed the quick-start tutorial, before you try your own dataset. 
+If you'd now like to apply CHIP to your own dataset, CHIP also allows you to specify stars and spectra on which your model will be trained. We assume in this tutorial that you have followed the quick-start tutorial before trying your own dataset. 
 
-To customize CHIP to your particular dataset you'll primarily be using the [config.json](config.json). The config.json file contains settings for two pipeline stages: preprocessing and training.
+To customize CHIP to your dataset, you will primarily adjust the [config.json](config.json) file. This file contains settings for two pipeline stages: preprocessing and training.
 
 
 The preprocessing arguments are at the top of the config file: 
@@ -213,13 +210,13 @@ Users should modify the values of the "val" keys to adjust these settings accord
 
 2. Next you will want to configure the "Preprocessing" section of [config.json](config.json). 
 
-3. Once configured, run the following commands in your anaconda prompt `conda activate chip` then while you are in the root directory of the CHIP run `python src/CHIP.py` 
+3. Once configured, run `conda activate chip` to activate your anaconda environment. 
 
-4. Once the previous step is completed, you can look in `data/chip_runs` folder to find the results of preprocessing (described in more detail in the quick-start tutorial).  
+4. Then, from the root directory of CHIP, run `python src/CHIP.py` to complete the pre-processing step. The results of the pre-processing will be located in the `data/chip_runs` directory (described in more detail in the quick-start tutorial).  
 
 5. You must have a file that contains the parameter values of the stars you would like to train the models on. The first column must be an identifier and the IDs MUST match up with the non-HIRES column in. Example: [stellar_parameter.csv](../data/spocs/stellar_parameters.csv)
 
-6. To train, make the following changes to `src/config.json`, make sure you change the training's run parameter to your specific run folder name. And that the Preprcoessing run val is set to `false`. Then you are ready to train `python src/CHIP.py`.
+6. To train, set the `run` parameter in the `Training` section of `src/config.json` to your specific run folder name. Make sure that the `run` parameter in the `Preprcoessing` section of `src/config.json` is set to `false`. Then, you are ready to train your model by running `python src/CHIP.py` from the root directory of CHIP.
 ---
 ---
 
