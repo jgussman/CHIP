@@ -757,19 +757,19 @@ class CHIP:
         
         Output: training id, training spectra, training ivar, training parameters, testing id, testing spectra, testing ivar, testing parameters
         '''
-        # np.array( array , dtype=np.float) is necessary, otherwise you would recieve the following type error 
+        # np.array( array , dtype=np.float64) is necessary, otherwise you would recieve the following type error 
         # TypeError: No loop matching the specified signature and casting was found for ufunc solve1
         X_id = self.train_id[X_indecies]
-        X_spec = np.array(self.train_spectra[X_indecies], dtype=np.float)
-        X_ivar = np.array(self.train_ivar[X_indecies], dtype=np.float)
+        X_spec = np.array(self.train_spectra[X_indecies], dtype=np.float64)
+        X_ivar = np.array(self.train_ivar[X_indecies], dtype=np.float64)
         # Remove 0th column that contains HIRES IDs
-        X_parameters = np.array(self.train_parameter.to_numpy()[X_indecies][:,1:], dtype=np.float)
+        X_parameters = np.array(self.train_parameter.to_numpy()[X_indecies][:,1:], dtype=np.float64)
 
         y_id = self.train_id[y_indecies]
-        y_spec = np.array(self.train_spectra[y_indecies], dtype=np.float)
-        y_ivar = np.array(self.train_ivar[y_indecies], dtype=np.float)
+        y_spec = np.array(self.train_spectra[y_indecies], dtype=np.float64)
+        y_ivar = np.array(self.train_ivar[y_indecies], dtype=np.float64)
         # Remove 0th column that contains HIRES IDs
-        y_parameters = np.array(self.train_parameter.to_numpy()[y_indecies][:,1:], dtype=np.float)
+        y_parameters = np.array(self.train_parameter.to_numpy()[y_indecies][:,1:], dtype=np.float64)
 
         return X_id, X_spec, X_ivar, X_parameters, y_id, y_spec, y_ivar, y_parameters
 
@@ -827,7 +827,11 @@ class CHIP:
                                              y_id, y_spec, y_ivar, self.parameters_list)
 
                 # Fit the model on the current batch
-                cannon_model.fit(ds)
+                try:
+                    cannon_model.fit(ds)
+                except:
+                    logging.error(f"Error: cannon_model.fit(ds) failed on batch {i}")
+                    return cannon_model
 
                 if break_out:
                     break
@@ -899,7 +903,7 @@ class CHIP:
             X_spec, X_ivar, y_spec, y_ivar = apply_mask(X_spec, X_ivar, y_spec, y_ivar, self.masks[mask_name])
 
             # [:,1:] to remove the first column which is the abundance name 
-            X_param = np.array(self.train_parameter.to_numpy()[:,1:], dtype=np.float) 
+            X_param = np.array(self.train_parameter.to_numpy()[:,1:], dtype=np.float64) 
             y_param = np.array(self.test_parameter.to_numpy()[:,1:], dtype=np.float) 
 
             # Train the model
