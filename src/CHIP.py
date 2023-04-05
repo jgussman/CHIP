@@ -27,7 +27,7 @@ from TheCannon import dataset, model
 
 
 class CHIP:
-    chip_version = "v1.0.1"
+    chip_version = "v1.0.6"
     thecannon_version = "v1.0.0"
 
     def __init__(self):
@@ -67,8 +67,6 @@ class CHIP:
 
             self.storage_path = os.path.join("data","chip_runs" , gmt_datetime )
 
-            # login into the NExSci servers
-            login('data/prv.cookies')
 
         else:
             # What chip run is going to be used
@@ -108,6 +106,11 @@ class CHIP:
                                 "SNR < 100":[],"NAN value in spectra":[],
                                 "No Clue":[],"Nan in IVAR":[],
                                 "Normalization error":[]}
+            
+            # Trim wl_solution 
+            self.wl_solution = np.load("data/spocs/wl_solution.npy")
+            if self.trim > 0:
+                self.wl_solution = self.wl_solution[:, self.trim: -self.trim]
 
             if isinstance(self.config["Preprocessing"]["run"]["val"],bool):
 
@@ -262,13 +265,21 @@ class CHIP:
                 return SNR
             else:
                 # Trim the left and right sides of each echelle order 
-                return temp_deblazedFlux[:, self.trim: -self.trim]
+                if self.trim > 0:
+                    return temp_deblazedFlux[:, self.trim: -self.trim]
+                else:
+                    return temp_deblazedFlux
+            
         else:
             # Load past data 
             file_path = os.path.join(past_rv_obs_path, filename + ".fits")
             if os.path.exists(file_path):
                 temp_deblazedFlux = fits.getdata(file_path)
-                return temp_deblazedFlux[:, self.trim: -self.trim]
+                if self.trim > 0:
+                    return temp_deblazedFlux[:, self.trim: -self.trim]
+                else:
+                    return temp_deblazedFlux
+            
             else:
                 # Star isn't in file location
                 self.download_spectrum(filename,SNR,past_rv_obs_path = False)
@@ -301,6 +312,9 @@ class CHIP:
         Outputs: None
         '''
         logging.info("CHIP.download_spectra( )")
+
+        # login into the NExSci servers
+        login('data/prv.cookies')
 
         start_time = time.perf_counter()
 
@@ -432,9 +446,6 @@ class CHIP:
         logging.info("CHIP.alpha_normalization( )")
         start_time = time.perf_counter()
         
-        # Trim wl_solution 
-        self.wl_solution = np.load("data/spocs/wl_solution.npy")
-        self.wl_solution = self.wl_solution[:, self.trim: -self.trim]
     
         # Create Normalized Spectra dir
         self.norm_spectra_dir_path = os.path.join( self.storage_path, "norm" )
@@ -491,7 +502,7 @@ class CHIP:
         # each stars' cross correlation 
         # Found that the 15th order works just fine alone
         # If there are 16 echelle orders, the first echelle order is 0
-        echelle_orders_list = [15,]
+        echelle_orders_list = [i for i in range(8,11)]
         # Key (int) echelle order number : tuple containing two 1-D numpy arrays representing 
         # wavelength of the echelle order then the flux in that echelle order.
         sollar_echelle_dic = {} 
@@ -529,7 +540,7 @@ class CHIP:
             # for example if set to 20, crosscorrRV will check 
             # [-20,20] in steps of 20/200.
             # 60 also gave good results
-            RV = 80  
+            RV = 80
 
             #Going to take the average of all the echelle shifts
             z_list = []  
@@ -537,6 +548,11 @@ class CHIP:
                 # HIRES (h)
                 h_wv = self.wl_solution[echelle_num]  
                 h_flux = self.spectraDic[filename][echelle_num]
+
+                # Make Flux look flatter, so that the cross correlation 
+                # will be more accurate
+                h_flux = h_flux / np.median(h_flux) 
+
                 # Solar (s)
                 s_wv = sollar_echelle_dic[echelle_num][0]        
                 s_flux = sollar_echelle_dic[echelle_num][1]
