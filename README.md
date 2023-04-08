@@ -23,18 +23,23 @@ The CHIP pipeline is designed to extract stellar parameters from iodine-imprinte
 
 1. Clone this repository by entering the following into your terminal:
 
-   ```git clone https://github.com/jgussman/CHIP```
+   ```git clone https://github.com/jgussman/CHIP``` 
+
+2. Change directories into the CHIP directory:
+
+   ```cd CHIP```
+
 
 2. Set up the environment required to use CHIP, using [Anaconda 3](https://www.anaconda.com).
 
-    ```conda env create```
+    ```conda env create -f install/chip-env.yml```
 
 
 3. (Windows Users Only) 
 
     If you are using a Windows machine, you **need** to download [geos_c.dll](https://www.dll-files.com/geos_c.dll.html) and move the file to the CHIP python environment's Library/bin folder. You can read more about this problem [here](https://github.com/Toblerity/Shapely/pull/1108).
 
-4. You're now ready to run CHIP! Inside the src directory, you will find another [README](https://github.com/jgussman/CHIP/blob/main/src/README.md) with details about how to run CHIP.
+4. You're now ready to run CHIP! Inside the [tutorials](./tutorials/) directory, you will find a [quick-start tutorial](./tutorials/quick-start.md) that will walk you through the process of using CHIP to extract stellar parameters from HIRES spectra. 
 
 
 ---

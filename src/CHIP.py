@@ -23,17 +23,28 @@ from sklearn.preprocessing import StandardScaler
 from TheCannon import dataset, model
 
 
-
-
-
 class CHIP:
-    chip_version = "v1.0.6"
-    thecannon_version = "v1.0.0"
+    chip_version = "v1.0.7"
+    training_version = "v1.0.1"
 
-    def __init__(self):
+    def __init__(self, config_file_path):
         '''
-        
+
+        Args: 
+            config_file_path (str): Path to the config.json file
+
+        Returns:
+            None
         '''
+        # Check if config file exists
+        if not os.path.exists(config_file_path):
+            logging.error(f"Config file {config_file_path} does not exist")
+            sys.exit()
+    
+
+        logging.info(f"Using config file: {config_file_path}")
+        self.config_file_path = config_file_path
+
         # Get arguments from config.json
         self.get_arguments()
 
@@ -50,9 +61,11 @@ class CHIP:
     def create_storage_location(self):
         ''' Creates a unique subdirectory in the data directory to store the outputs of CHIP
         
-        Inputs: None
+        Args: 
+            None
 
-        Outputs: None 
+        Outputs: 
+            None 
         '''
         logging.debug("CHIP.create_storage_location( )")
 
@@ -93,9 +106,11 @@ class CHIP:
     def run(self):
         ''' Run the pipeline from end to end. 
 
-        Inputs: None
+        Args: 
+            None
 
-        Outputs: None
+        Outputs: 
+            None
         '''
         
         if self.config["Preprocessing"]["run"]["val"]:
@@ -157,7 +172,7 @@ class CHIP:
                     
     
         elif self.config["Training"]["run"]["val"]:
-            logging.info(f"The Cannon {self.thecannon_version}")
+            logging.info(f"The Cannon {self.training_version}")
     
 
             self.load_the_cannon()
@@ -170,9 +185,11 @@ class CHIP:
     def load_past_rv_obs(self,data_folder_path):
         ''' Load in past data to continue preprocessing
 
-        Input: data_folder_path (str): File path to rv_obs folder
+        Args: 
+            data_folder_path (str): File path to rv_obs folder
 
-        Output: None 
+        Returns: 
+            None 
         '''
         for _, row in self.hires_filename_snr_df.iterrows():
             # Save the Best Spectrum
@@ -188,17 +205,19 @@ class CHIP:
     def get_arguments(self):
         ''' Get arguments from src/config.json and store in self.config 
 
-        Inputs: None
+        Args:
+            None
 
-        Outputs: None
+        Outputs:
+            None
         '''
         logging.debug("CHIP.get_arguments( )")
 
-        with open("src/config.json", "r") as f:
+        with open(self.config_file_path, "r") as f:
             self.config = json.load(f)
         
         self.cores = self.config["Preprocessing"]["cores"]["val"]
-        self.trim  = self.config["Preprocessing"]["trim_spectrum"]["val"]
+        self.trim  = self.config["Preprocessing"]["trim spectrum"]["val"]
         logging.info( f"config.json : {self.config}" )
     
 
@@ -206,10 +225,12 @@ class CHIP:
     def calculate_SNR(spectrum, gain = 2.09):
         ''' Calculates the SNR of spectrum using the 5th echelle orders
 
-        Inputs: spectrum (np.array) - spectrum with at least 5 rows representing echelle orders 
-                gain (float) - gain of the detector
+        Args: 
+            spectrum (np.array) - spectrum with at least 5 rows representing echelle orders 
+            gain (float) - gain of the detector
 
-        Outputs: (float) estimated SNR of inputed spectrum
+        Outputs: 
+            (float) estimated SNR of inputed spectrum
         '''
         logging.debug(f"CHIP.calculate_SNR( {spectrum} )")
 
@@ -222,9 +243,11 @@ class CHIP:
     def delete_spectrum(self,filename):
         '''Remove spectrum from local storage
 
-        Inputs: filename (str): HIRES file name of spectrum you want to delete
+        Args: 
+            filename (str): HIRES file name of spectrum you want to delete
 
-        Outputs: None 
+        Outputs: 
+            None 
         '''
         logging.debug(f"CHIP.delete_spectrum( {filename} )")
         file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
@@ -235,16 +258,17 @@ class CHIP:
             pass 
 
 
-    def download_spectrum(self,filename,SNR = True, past_rv_obs_path = False):
+    def download_spectrum(self,filename,snr = True, past_rv_obs_path = False):
         '''Download Individual Spectrum and calculate the ivar 
 
-        Input: filename (str): HIRES file name of spectrum you want to download
-            SNR (bool): if you want to calculate the SNR of the spectrum 
+        Args: 
+            filename (str): HIRES file name of spectrum you want to download
+            snr (bool): if you want to calculate the SNR of the spectrum 
             past_rv_obs_path (str): if you want to load in old rb obs set to rb_obs dir path
 
-        Output: None
+        Returns: None
         '''
-        logging.debug(f"CHIP.download_spectrum( filename={filename}, SNR={SNR}, past_rv_obs_path={past_rv_obs_path} )")
+        logging.debug(f"CHIP.download_spectrum( filename={filename}, SNR={snr}, past_rv_obs_path={past_rv_obs_path} )")
         
         if not past_rv_obs_path:
             #Download spectra
@@ -257,12 +281,12 @@ class CHIP:
                 # There is a problem with the downloaded fits file 
                 return -1
             
-            if SNR: # Used to find best SNR 
-                SNR = self.calculate_SNR(temp_deblazedFlux)
+            if snr: # Used to find best SNR 
+                snr = self.calculate_SNR(temp_deblazedFlux)
 
                 # delete Spectrum variable so it can be delete if needed
                 del temp_deblazedFlux 
-                return SNR
+                return snr
             else:
                 # Trim the left and right sides of each echelle order 
                 if self.trim > 0:
@@ -288,9 +312,11 @@ class CHIP:
     def update_removedstars(self):
         ''' Helper method to insure removed_stars will be updated properly accross each method.
         
-        Input: None
+        Args: 
+            None
 
-        Output: None
+        Returns: 
+            None
         '''
         logging.debug("CHIP.update_removedstars( )")
 
@@ -307,9 +333,11 @@ class CHIP:
         ''' Downloads all the spectra for each star in the NExSci, calculates 
         the SNR and saves the spectrum with the highest SNR for each star.
 
-        Inputs: None
+        Args: 
+            None
 
-        Outputs: None
+        Outputs: 
+            None
         '''
         logging.info("CHIP.download_spectra( )")
 
@@ -318,10 +346,10 @@ class CHIP:
 
         start_time = time.perf_counter()
 
-        # Cross matched names 
-        cross_matched_file_path = self.config["Preprocessing"]["cross_match_stars"]["val"]
-        cross_matched_df = pd.read_csv( cross_matched_file_path, sep=" " )
-        hires_names_array = cross_matched_df["HIRES"].to_numpy()
+        # IDs for all the stars the user wants to download iodine imprinted spectra for
+        hires_stars_ids_file_path = self.config["Preprocessing"]["HIRES stars IDs"]["val"]
+        hires_stars_ids_df = pd.read_csv( hires_stars_ids_file_path, sep=" " )
+        hires_names_array = hires_stars_ids_df["HIRESID"].to_numpy()
 
         hiresID_fileName_snr_dic = {"HIRESid": [],"FILENAME":[],"SNR":[]}  
 
@@ -416,10 +444,12 @@ class CHIP:
     def sigma_calculation(self,filename , star_ID):
         '''Calculates sigma for inverse variance (IVAR) 
 
-        Inputs: filename (str): HIRES file name of spectrum you want to calculate IVAR for
-                star_ID (str): HIRES identifer 
+        Args: 
+            filename (str): HIRES file name of spectrum you want to calculate IVAR for
+            star_ID (str): HIRES identifer 
 
-        Outputs: None
+        Outputs: 
+            None
         '''
         logging.debug("CHIP.sigma_calculation( filename = {filename} )")
         gain = 1.2 #electrons/ADU
@@ -439,9 +469,11 @@ class CHIP:
     def alpha_normalization(self):
         ''' Rolling Continuum Normalization.  
 
-        Input: None
+        Args: 
+            None
 
-        Output: None
+        Returns:
+            None
         '''
         logging.info("CHIP.alpha_normalization( )")
         start_time = time.perf_counter()
@@ -483,9 +515,11 @@ class CHIP:
     def cross_correlate_spectra(self):
         ''' Shift all spectra and sigmas to the rest wavelength. 
 
-        Input: None
+        Args: 
+            None
 
-        Output: None
+        Returns: 
+        None
         '''
         logging.info("CHIP.cross_correlate_spectra( )")
 
@@ -530,9 +564,11 @@ class CHIP:
                 This will alter the key:value structure of self.spectraDic. self.spectraDic's
                 key value pair will be  filename:(wavelength array, flux array)
             
-            Input: filename (str): HIRES file name of spectrum you want to cross correlate 
+            Args: 
+                filename (str): HIRES file name of spectrum you want to cross correlate 
 
-            Output: None
+            Returns: 
+                None
             '''
             logging.info("CHIP.cross_correlate_spectrum( )")
 
@@ -584,9 +620,11 @@ class CHIP:
     def interpolate(self):
         ''' This method downloads the interpolated wavelength to interpolated_wl.npy 
 
-        Input: None
+        Args: 
+            None
 
-        Output: None
+        Returns: 
+            None
         '''
         logging.info("CHIP.interpolate( )")
 
@@ -639,9 +677,11 @@ class CHIP:
     def load_the_cannon(self):
         ''' Load in the data The Cannon will use. 
         
-        Input: None
+        Args: 
+            None
 
-        Output: None
+        Returns: 
+            None
         '''
         logging.info("CHIP.load_the_cannon( )") 
 
@@ -654,8 +694,8 @@ class CHIP:
 
         # load spectra 
         # Note: the key is hiresid instead of filename 
-        cross_match_array = pd.read_csv( os.path.join( self.data_dir_path,"HIRES_Filename_snr.csv"))[["HIRESid",'FILENAME']].to_numpy()
-        for hiresid, filename in cross_match_array:
+        hiresid_filenames_array = pd.read_csv( os.path.join( self.data_dir_path,"HIRES_Filename_snr.csv"))[["HIRESID",'FILENAME']].to_numpy()
+        for hiresid, filename in hiresid_filenames_array:
             spec_path = os.path.join( interpolated_dir_path, filename + "_spec.npy" )
             ivar_path = os.path.join( interpolated_dir_path, filename + "_ivar.npy" )
             if os.path.exists( spec_path ):
@@ -678,7 +718,7 @@ class CHIP:
             sys.exit(1)
         self.parameters_df = pd.read_csv(stellar_parameters_path)[ hiresid_parameters_list ]
         # Extract only the stars that were preprocessed 
-        self.parameters_df = self.parameters_df[self.parameters_df["HIRESID"].isin( cross_match_array[:,0] )]
+        self.parameters_df = self.parameters_df[self.parameters_df["HIRESID"].isin( hiresid_filenames_array[:,0] )]
 
         logging.info("before scaling\n" + self.parameters_df.to_string())
         # Create a StandardScaler object
@@ -703,9 +743,11 @@ class CHIP:
     def create_mask_array(self,mask_path):
         ''' Create a mask array for the The Cannon. 
         
-        Input: mask_path (str) - path to the mask
+        Args: 
+            mask_path (str) - path to the mask
                
-        Output: (np.array((wl_solution.shape[0],))) - masked boolean array
+        Returns: 
+            (np.array((wl_solution.shape[0],))) - masked boolean array
         '''
         logging.debug("CHIP.create_mask_array( mask_path={mask_path}})") 
 
@@ -749,10 +791,13 @@ class CHIP:
     def evaluate_model(self, md, ds, true_labels, save = False):
         ''' Evaluate how well a model was trained.
 
-        Input: md (TheCannon.model.CannonModel) - 
-               ds (TheCannon.dataset.Dataset) -
-               true_labels (np.array((M,))) - true values for the corresponds inferred labels 
+        Args: 
+            md (TheCannon.model.CannonModel) - 
+            ds (TheCannon.dataset.Dataset) -
+            true_labels (np.array((M,))) - true values for the corresponds inferred labels 
         
+        Returns:
+            (float) - cost function value
         '''
         label_errors = md.infer_labels(ds)
         inferred_labels = ds.test_label_vals
@@ -768,10 +813,12 @@ class CHIP:
     def split_data(self, X_indecies, y_indecies):
         ''' Split data to be put in TheCannon.dataset.Dataset
 
-        Input: X_indecies (np.array((N,))) - indecies to be used for the training set
-               y_indecies (np.array((M,))) - indecies to be used for the testing set
+        Args: 
+            X_indecies (np.array((N,))) - indecies to be used for the training set
+            y_indecies (np.array((M,))) - indecies to be used for the testing set
         
-        Output: training id, training spectra, training ivar, training parameters, testing id, testing spectra, testing ivar, testing parameters
+        Returns: 
+            training id, training spectra, training ivar, training parameters, testing id, testing spectra, testing ivar, testing parameters
         '''
         # np.array( array , dtype=np.float64) is necessary, otherwise you would recieve the following type error 
         # TypeError: No loop matching the specified signature and casting was found for ufunc solve1
@@ -793,29 +840,33 @@ class CHIP:
     def train_model(self,batch_size, poly_order, mask_name, test_set=False):
         ''' Train a Cannon model using mini-batch and k-fold cv
 
-        Input: batch_size (int) : number of batches to split the training set into for mini-batch training
-               poly_order (int) : A positive int, tells the model what degree polynomial to fit
-               mask_name (str) : name of the mask to use
-               test_set (bool) : If True, the model will be evaluated on the test set, instead of the validation set
+        Args: 
+            batch_size (int) : number of batches to split the training set into for mini-batch training
+            poly_order (int) : A positive int, tells the model what degree polynomial to fit
+            mask_name (str) : name of the mask to use
+            test_set (bool) : If True, the model will be evaluated on the test set, instead of the validation set
         
-        Output: The mean evaluation score 
+        Returns: 
+            (float) The mean evaluation score 
         '''
         logging.info(f"train_model(batch_size = {batch_size}, poly_order={poly_order}, mask_name={mask_name}, test_set={test_set})")
         
         def mini_batch(cannon_model,batch_size,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar):
             ''' Train a Cannon model using mini-batch
 
-            Input: cannon_model (TheCannon.model.CannonModel) - A Cannon model
-                   batch_size (int) : number of batches to split the training set into for mini-batch training
-                   X_id (np.array((M,))) - HIRES identifers that correspond to the rows in X_flux, X_ivar, and X_parameter
-                   X_flux (np.array((M,N))) - flux for each star in X_id 
-                   X_ivar (np.array((M,N))) - ivar for each star in X_id 
-                   X_parameter (np.array((M,P))) - contains all the parameters for each star in X_id (in the exact same order)
-                   y_id (np.array((V,))) - HIRES identifers that correspond to the rows in y_flux, y_ivar
-                   y_flux (np.array((V,N))) - flux for each star in y_id 
-                   y_ivar (np.array((V,N))) - ivar for each star in y_id 
+            Args: 
+                cannon_model (TheCannon.model.CannonModel) - A Cannon model
+                batch_size (int) : number of batches to split the training set into for mini-batch training
+                X_id (np.array((M,))) - HIRES identifers that correspond to the rows in X_flux, X_ivar, and X_parameter
+                X_flux (np.array((M,N))) - flux for each star in X_id 
+                X_ivar (np.array((M,N))) - ivar for each star in X_id 
+                X_parameter (np.array((M,P))) - contains all the parameters for each star in X_id (in the exact same order)
+                y_id (np.array((V,))) - HIRES identifers that correspond to the rows in y_flux, y_ivar
+                y_flux (np.array((V,N))) - flux for each star in y_id 
+                y_ivar (np.array((V,N))) - ivar for each star in y_id 
             
-            Output: cannon_model (TheCannon.model.CannonModel) - A trained Cannon model
+            Returns: 
+                (TheCannon.model.CannonModel) - A trained Cannon model
 
             '''
             # Create mini-batches of the data
@@ -857,15 +908,17 @@ class CHIP:
         def apply_mask(X_spec, X_ivar, y_spec, y_ivar,mask):
             ''' Mask the spectra and ivars
 
-            Input:  X_spec (np.array((M,N))) - flux for each star in X_id
-                    X_ivar (np.array((M,N))) - ivar for each star in X_id
-                    y_spec (np.array((V,N))) - flux for each star in y_id
-                    y_ivar (np.array((V,N))) - ivar for each star in y_id
+            Args:  
+                X_spec (np.array((M,N))) - flux for each star in X_id
+                X_ivar (np.array((M,N))) - ivar for each star in X_id
+                y_spec (np.array((V,N))) - flux for each star in y_id
+                y_ivar (np.array((V,N))) - ivar for each star in y_id
 
-            Output: X_spec (np.array((M,N))) - mask applied flux for each star in X_id
-                    X_ivar (np.array((M,N))) - mask applied ivar for each star in X_id
-                    y_spec (np.array((V,N))) - mask applied flux for each star in y_id
-                    y_ivar (np.array((V,N))) - mask applied ivar for each star in y_id
+            Returns: 
+                X_spec (np.array((M,N))) - mask applied flux for each star in X_id
+                X_ivar (np.array((M,N))) - mask applied ivar for each star in X_id
+                y_spec (np.array((V,N))) - mask applied flux for each star in y_id
+                y_ivar (np.array((V,N))) - mask applied ivar for each star in y_id
             '''
             # Create copies of the arrays to avoid changing the original arrays
             Xspec, Xivar, yspec, yivar = X_spec.copy(), X_ivar.copy(), y_spec.copy(), y_ivar.copy()
@@ -947,9 +1000,11 @@ class CHIP:
     def initialize_model(poly_order = 1):
         ''' Initialize The Cannon Model
 
-        Input: poly_order (int) : A positive int, tells the model what degree polynomial to fit
+        Args: 
+            poly_order (int) : A positive int, tells the model what degree polynomial to fit
 
-        Output: TheCannon.model.CannonModel object 
+        Returns: 
+            TheCannon.model.CannonModel object 
         '''
         md = model.CannonModel( order = poly_order, useErrors=False )  
         return md 
@@ -959,17 +1014,19 @@ class CHIP:
     def initailize_dataset(wl_sol, X_id, X_flux, X_ivar, X_parameter, y_id, y_flux, y_ivar, parameters_names ):
         ''' Put data into data structure The Cannon will train on.
 
-        Input: wl_sol (np.array((N,))) - wavelength solution for all spectra
-               X_id (np.array((M,))) - HIRES identifers that correspond to the rows in X_flux, X_ivar, and X_parameter
-               X_flux (np.array((M,N))) - flux for each star in X_id 
-               X_ivar (np.array((M,N))) - ivar for each star in X_id 
-               X_parameter (np.array((M,P))) - contains all the parameters for each star in X_id (in the exact same order)
-               y_id (np.array((V,))) - HIRES identifers that correspond to the rows in y_flux, y_ivar
-               y_flux (np.array((V,N))) - flux for each star in y_id 
-               y_ivar (np.array((V,N))) - ivar for each star in y_id 
-               parameters_names (np.array((P,))) - column names of X_parameter and y_parameter
+        Args: 
+            wl_sol (np.array((N,))) - wavelength solution for all spectra
+            X_id (np.array((M,))) - HIRES identifers that correspond to the rows in X_flux, X_ivar, and X_parameter
+            X_flux (np.array((M,N))) - flux for each star in X_id 
+            X_ivar (np.array((M,N))) - ivar for each star in X_id 
+            X_parameter (np.array((M,P))) - contains all the parameters for each star in X_id (in the exact same order)
+            y_id (np.array((V,))) - HIRES identifers that correspond to the rows in y_flux, y_ivar
+            y_flux (np.array((V,N))) - flux for each star in y_id 
+            y_ivar (np.array((V,N))) - ivar for each star in y_id 
+            parameters_names (np.array((P,))) - column names of X_parameter and y_parameter
               
-        Output: TheCannon.dataset.Dataset object 
+        Returns: 
+            (TheCannon.dataset.Dataset) containing the data in the correct format for The Cannon 
         '''
 
         ds = dataset.Dataset(wl_sol, X_id, X_flux, X_ivar, X_parameter, y_id, y_flux, y_ivar) 
@@ -982,9 +1039,11 @@ class CHIP:
     def cannon_splits(self, parameters_df):
         ''' Apply test and validation splits to the data. This must be ran after self.parameters_df is created.
         
-        Input: parameters_df (pd.DataFrame) : contains all the parameters for each star in X_id (in the exact same order)
+        Args: 
+            parameters_df (pd.DataFrame) : contains all the parameters for each star in X_id (in the exact same order)
 
-        Output: None
+        Returns: 
+            None
         '''
         logging.debug("CHIP.cannon_splits( )")
 
@@ -1019,9 +1078,11 @@ class CHIP:
     def hyperparameter_tuning(self):
         ''' Tune the hyperparameters of The Cannon model. This must be ran after self.cannon_splits is ran.
 
-        Input: None
+        Args: 
+            None
 
-        Output: None
+        Returns:
+            None
         '''
         logging.debug("CHIP.hyperparameter_tuning( )")
 
@@ -1065,10 +1126,12 @@ class CHIP:
     def train_best_model(self, batch_size, poly_order, mask_name):
         ''' Train the best model with the best hyperparameters. This must be ran after self.hyperparameter_tuning is ran.
 
-        Input: batch_size (int) the 
-               poly_order (int)
+        Args: 
+            batch_size (int) the 
+            poly_order (int)
 
-        Output: None
+        Returns: 
+            None
         '''
         logging.debug(f"CHIP.train_best_model( batch_size={batch_size}, poly_order={poly_order}, mask_name={mask_name})")
 
@@ -1113,7 +1176,7 @@ if __name__ == "__main__":
     # set datefmt to GMT
     logging.Formatter.converter = time.gmtime
 
-    chip = CHIP()
+    chip = CHIP(config_file_path="config/config.json")
     chip.run()
 
     # Move logging file to the location of this current run

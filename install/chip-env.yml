@@ -1,0 +1,10 @@
+name: chip-delete
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8.5
+  - matplotlib
+  - pip
+  - pip:
+    - -r requirements.txt
+
