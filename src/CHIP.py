@@ -24,8 +24,8 @@ from TheCannon import dataset, model
 
 
 class CHIP:
-    chip_version = "v1.0.8"
-    training_version = "v1.0.1"
+    chip_version = "v0.5.8"
+    training_version = "v0.5.1"
 
     def __init__(self, config_file_path):
         '''
