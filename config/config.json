@@ -1,6 +1,6 @@
 {   
  
-    "Preprocessing": {
+    "Pre-processing": {
 
         "description": "Arguments for preprocessing.",
     
@@ -11,7 +11,7 @@
         
         "HIRES stars IDs" : {
             "val": "data/spocs/one_star.txt",
-            "description": "Path to the file containing a 1 column with a header of 'HIRESID' with the names of the stars you want to use."
+            "description": "Path to the file containing a column with a header of 'HIRESID' with the names (using KOA conventions) of the stars you want to use."
         },
 
         "trim spectrum" : {

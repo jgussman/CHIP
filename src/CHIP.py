@@ -24,7 +24,7 @@ from TheCannon import dataset, model
 
 
 class CHIP:
-    chip_version = "v1.0.7"
+    chip_version = "v1.0.8"
     training_version = "v1.0.1"
 
     def __init__(self, config_file_path):
@@ -73,7 +73,7 @@ class CHIP:
         # If we are running preprocessing then we want a new 
         # CHIP run sub dir else we are running The Cannon
         # and want to use a previous run 
-        if self.config["Preprocessing"]["run"]["val"]:
+        if self.config["Pre-processing"]["run"]["val"]:
             # Create a new storage location for this pipeline
             # Greenwich Mean Time (UTC) right now 
             gmt_datetime = time.strftime("%Y-%m-%d_%H-%M-%S",time.gmtime())
@@ -113,7 +113,7 @@ class CHIP:
             None
         '''
         
-        if self.config["Preprocessing"]["run"]["val"]:
+        if self.config["Pre-processing"]["run"]["val"]:
             logging.info(f"CHIP {self.chip_version}")
 
             # Record results 
@@ -127,7 +127,7 @@ class CHIP:
             if self.trim > 0:
                 self.wl_solution = self.wl_solution[:, self.trim: -self.trim]
 
-            if isinstance(self.config["Preprocessing"]["run"]["val"],bool):
+            if isinstance(self.config["Pre-processing"]["run"]["val"],bool):
 
                 self.download_spectra()
 
@@ -138,7 +138,7 @@ class CHIP:
                 self.interpolate()
 
             else:
-                past_run, data_folder = self.config["Preprocessing"]["run"]["val"][0], self.config["Preprocessing"]["run"]["val"][1]
+                past_run, data_folder = self.config["Pre-processing"]["run"]["val"][0], self.config["Pre-processing"]["run"]["val"][1]
                 logging.info(f"Using the past run {past_run}'s {data_folder}")
 
                 past_run_path = os.path.join(os.path.dirname(self.storage_path), past_run)
@@ -193,7 +193,7 @@ class CHIP:
         '''
         for _, row in self.hires_filename_snr_df.iterrows():
             # Save the Best Spectrum
-            star_id = row["HIRESid"]
+            star_id = row["HIRESID"]
             filename = row["FILENAME"]
             self.spectraDic[filename] = self.download_spectrum(filename, 
                                                                 SNR=False,
@@ -216,8 +216,8 @@ class CHIP:
         with open(self.config_file_path, "r") as f:
             self.config = json.load(f)
         
-        self.cores = self.config["Preprocessing"]["cores"]["val"]
-        self.trim  = self.config["Preprocessing"]["trim spectrum"]["val"]
+        self.cores = self.config["Pre-processing"]["cores"]["val"]
+        self.trim  = self.config["Pre-processing"]["trim spectrum"]["val"]
         logging.info( f"config.json : {self.config}" )
     
 
@@ -347,11 +347,11 @@ class CHIP:
         start_time = time.perf_counter()
 
         # IDs for all the stars the user wants to download iodine imprinted spectra for
-        hires_stars_ids_file_path = self.config["Preprocessing"]["HIRES stars IDs"]["val"]
+        hires_stars_ids_file_path = self.config["Pre-processing"]["HIRES stars IDs"]["val"]
         hires_stars_ids_df = pd.read_csv( hires_stars_ids_file_path, sep=" " )
         hires_names_array = hires_stars_ids_df["HIRESID"].to_numpy()
 
-        hiresID_fileName_snr_dic = {"HIRESid": [],"FILENAME":[],"SNR":[]}  
+        hiresID_fileName_snr_dic = {"HIRESID": [],"FILENAME":[],"SNR":[]}  
 
         # Location to save spectra
         spectra_download_location = os.path.join( self.storage_path, "rv_obs" )
@@ -414,7 +414,7 @@ class CHIP:
                                                                                         SNR=False)
                             
                             logging.debug(f"{star_ID}'s best SNR spectrum came from {best_SNR_filename} with an SNR={best_SNR}")
-                            hiresID_fileName_snr_dic["HIRESid"].append(star_ID)
+                            hiresID_fileName_snr_dic["HIRESID"].append(star_ID)
                             hiresID_fileName_snr_dic["FILENAME"].append(best_SNR_filename)
                             hiresID_fileName_snr_dic["SNR"].append(best_SNR)
                         

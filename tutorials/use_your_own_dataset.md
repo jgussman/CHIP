@@ -3,39 +3,41 @@
 
 If you'd now like to apply CHIP to your own dataset, CHIP also allows you to specify stars and spectra on which your model will be trained. We assume in this tutorial that you have followed the quick-start tutorial before trying your own dataset. 
 
-To customize CHIP to your dataset, you will primarily adjust the [config.json](config.json) file. This file contains settings for two pipeline stages: preprocessing and training.
+To customize CHIP to your dataset, you will primarily adjust the [config.json](../config/config.json) file. This file contains settings for two pipeline stages: pre-proocessing and training.
+
+    Note: all paths in the config file are relative to the current working directory at the time of running CHIP. Or you can specify an absolute path to the file. 
 
 
-The preprocessing arguments are at the top of the config file: 
+The pre-proocessing arguments are at the top of the config file: 
 
 ```
-{   
- 
-    "Preprocessing": {
+{
+    "Pre-processing": {
 
-        "description": "Arguments for preprocessing.",
+        "description": "Arguments for pre-proocessing.",
     
         "run" : { 
             "val": true,
             "description": "Do you want to run CHIP (true/false)? If you want to use data from a past run, you need to specify the run's name and what data you want to use from that folder ex: [2022-12-28_22-13-57, rv_obs]."
         },
         
-        "cross_match_stars" : {
-            "val": "data/spocs/tutorialStars.txt",
-            "description": "Cross Match Names file path ---> this txt file must have two columns seperated by a space with headers, one of the columns will the names of the stars in the catalogue you want. The other column must have the column name as 'HIRES' and contain the names of the HIRES identification for the stars. Ex: data/spocs/starnames_crossmatch_SPOCS_NEXSCI.txt"
+        "HIRES stars IDs" : {
+            "val": "data/spocs/one_star.txt",
+            "description": "Path to the file containing a column with a header of 'HIRESID' with the names (using KOA conventions) of the stars you want to use."
         },
 
-        "trim_spectrum" : {
-            "val": 50,
+        "trim spectrum" : {
+            "val": 0,
             "description": "Remove this many pixels from the left and right edges of EACH echelle order."
         },
 
         "cores" : { 
-            "val": 2,
+            "val": -1,
             "description": "How many cores on your machine would you like to use? -1 for all."
         }
 
     }, 
+     
 ```
 
 The training arguments are in the latter half of the file: 
@@ -130,14 +132,14 @@ Users should modify the values of the "val" keys to adjust these settings accord
 
     An example of this is [tutorialStars.txt](../data/spocs/tutorialStars.txt). 
 
-2. Next you will want to configure the "Preprocessing" section of [config.json](config.json). 
+2. Next you will want to configure the "Pre-processing" section of [config.json](config.json). 
 
 3. Once configured, run `conda activate chip` to activate your anaconda environment. 
 
 4. Then, from the root directory of CHIP, run `python src/CHIP.py` to complete the pre-processing step. The results of the pre-processing will be located in the `data/chip_runs` directory (described in more detail in the quick-start tutorial).  
 
-5. You must have a file that contains the parameter values of the stars you would like to train the models on. The first column must be an identifier and the IDs MUST match up with the non-HIRES column in. Example: [stellar_parameter.csv](../data/spocs/stellar_parameters.csv)
+5. You must have a file that contains the parameter values of the stars you would like to train the models on. The first column must be an identifier and the IDs MUST match up with the non-HIRES column in. Example: [stellar_parameter.csv](../data/spocs/stellar_parameters.csv). 
 
-6. To train, set the `run` parameter in the `Training` section of `src/config.json` to your specific run folder name. Make sure that the `run` parameter in the `Preprcoessing` section of `src/config.json` is set to `false`. Then, you are ready to train your model by running `python src/CHIP.py` from the root directory of CHIP.
+6. To train, set the `run` parameter in the `Training` section of the [config.json](../config/config.json) to the specific run folder name you would like to train using. You can choose any folder inside your [data/chip_runs](../data/chip_runs/) folder. Make sure that the `run` parameter in the `Preprcoessing` section of [config.json](../config/config.json) is set to `false`. Then, you are ready to train your model by running `python src/CHIP.py` from the root directory of CHIP.
 ---
 ---
