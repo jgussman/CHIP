@@ -24,7 +24,7 @@ from TheCannon import dataset, model
 
 
 class CHIP:
-    chip_version = "v0.5.8"
+    preprocessing_version = "v0.5.8"
     training_version = "v0.5.1"
 
     def __init__(self, config_file_path):
@@ -114,7 +114,7 @@ class CHIP:
         '''
         
         if self.config["Pre-processing"]["run"]["val"]:
-            logging.info(f"CHIP {self.chip_version}")
+            logging.info(f"Pre-processing Version: {self.preprocessing_version}")
 
             # Record results 
             self.removed_stars = {"no RV observations":[],"rvcurve wasn't created":[], 
