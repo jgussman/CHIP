@@ -9,7 +9,7 @@ import matplotlib.gridspec as gridspec
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--results_path","-r",help="Path to the results folder",required=True)
+parser.add_argument("-r","--results_path",dest="results_path",help="Path to the results folder")
 
 args = parser.parse_args()
 cannon_results_path = args.results_path
@@ -26,6 +26,9 @@ inferred_labels = scaler.inverse_transform(inferred_labels)
 param_names = joblib.load( os.path.join(cannon_results_path, "parameters_names.joblib" ))
 
 
+# Remove [ 78,  94, 101, 114, 129] from the inferred labels and y_param
+inferred_labels = np.delete(inferred_labels,[ 78,  94, 101, 114, 129],axis=0)
+y_param = np.delete(y_param,[ 78,  94, 101, 114, 129],axis=0)
 
 
 rice_std = {"Y/H":0.08,"Ni/H":0.04,"Fe/H":0.03,"Mn/H":0.05,"Cr/H":0.04,"V/H":0.06,"Ti/H":0.04,
