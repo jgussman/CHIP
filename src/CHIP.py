@@ -59,16 +59,8 @@ class CHIP:
 
                                                                                      
     def create_storage_location(self):
-        ''' Creates a unique subdirectory in the data directory to store the outputs of CHIP
-        
-        Args: 
-            None
-
-        Outputs: 
-            None 
-        '''
+        ''' Creates a unique subdirectory in the data directory to store the outputs of CHIP'''
         logging.debug("CHIP.create_storage_location( )")
-
 
         # If we are running preprocessing then we want a new 
         # CHIP run sub dir else we are running The Cannon
@@ -104,14 +96,7 @@ class CHIP:
 
         
     def run(self):
-        ''' Run the pipeline from end to end. 
-
-        Args: 
-            None
-
-        Outputs: 
-            None
-        '''
+        ''' Run the pipeline from end to end.'''
         
         if self.config["Pre-processing"]["run"]["val"]:
             logging.info(f"Pre-processing Version: {self.preprocessing_version}")
@@ -187,9 +172,6 @@ class CHIP:
 
         Args: 
             data_folder_path (str): File path to rv_obs folder
-
-        Returns: 
-            None 
         '''
         for _, row in self.hires_filename_snr_df.iterrows():
             # Save the Best Spectrum
@@ -203,14 +185,7 @@ class CHIP:
 
 
     def get_arguments(self):
-        ''' Get arguments from src/config.json and store in self.config 
-
-        Args:
-            None
-
-        Outputs:
-            None
-        '''
+        ''' Get arguments from src/config.json and store in self.config'''
         logging.debug("CHIP.get_arguments( )")
 
         with open(self.config_file_path, "r") as f:
@@ -245,9 +220,6 @@ class CHIP:
 
         Args: 
             filename (str): HIRES file name of spectrum you want to delete
-
-        Outputs: 
-            None 
         '''
         logging.debug(f"CHIP.delete_spectrum( {filename} )")
         file_path = os.path.join(self.dataSpectra.localdir,filename + ".fits")
@@ -265,8 +237,6 @@ class CHIP:
             filename (str): HIRES file name of spectrum you want to download
             snr (bool): if you want to calculate the SNR of the spectrum 
             past_rv_obs_path (str): if you want to load in old rb obs set to rb_obs dir path
-
-        Returns: None
         '''
         logging.debug(f"CHIP.download_spectrum( filename={filename}, SNR={snr}, past_rv_obs_path={past_rv_obs_path} )")
         
@@ -310,14 +280,7 @@ class CHIP:
 
 
     def update_removedstars(self):
-        ''' Helper method to insure removed_stars will be updated properly accross each method.
-        
-        Args: 
-            None
-
-        Returns: 
-            None
-        '''
+        ''' Helper method to insure removed_stars will be updated properly accross each method.'''
         logging.debug("CHIP.update_removedstars( )")
 
         # Update removed_stars
@@ -332,12 +295,6 @@ class CHIP:
     def download_spectra(self):
         ''' Downloads all the spectra for each star in the NExSci, calculates 
         the SNR and saves the spectrum with the highest SNR for each star.
-
-        Args: 
-            None
-
-        Outputs: 
-            None
         '''
         logging.info("CHIP.download_spectra( )")
 
@@ -446,10 +403,7 @@ class CHIP:
 
         Args: 
             filename (str): HIRES file name of spectrum you want to calculate IVAR for
-            star_ID (str): HIRES identifer 
-
-        Outputs: 
-            None
+            star_ID (str): HIRES identifer
         '''
         logging.debug("CHIP.sigma_calculation( filename = {filename} )")
         gain = 1.2 #electrons/ADU
@@ -467,14 +421,7 @@ class CHIP:
 
 
     def alpha_normalization(self):
-        ''' Rolling Continuum Normalization.  
-
-        Args: 
-            None
-
-        Returns:
-            None
-        '''
+        ''' Rolling Continuum Normalization.'''
         logging.info("CHIP.alpha_normalization( )")
         start_time = time.perf_counter()
         
@@ -513,14 +460,7 @@ class CHIP:
 
 
     def cross_correlate_spectra(self):
-        ''' Shift all spectra and sigmas to the rest wavelength. 
-
-        Args: 
-            None
-
-        Returns: 
-        None
-        '''
+        ''' Shift all spectra and sigmas to the rest wavelength.'''
         logging.info("CHIP.cross_correlate_spectra( )")
 
         start_time = time.perf_counter()
@@ -565,10 +505,7 @@ class CHIP:
                 key value pair will be  filename:(wavelength array, flux array)
             
             Args: 
-                filename (str): HIRES file name of spectrum you want to cross correlate 
-
-            Returns: 
-                None
+                filename (str): HIRES file name of spectrum you want to cross correlate
             '''
             logging.info("CHIP.cross_correlate_spectrum( )")
 
@@ -618,14 +555,7 @@ class CHIP:
 
 
     def interpolate(self):
-        ''' This method downloads the interpolated wavelength to interpolated_wl.npy 
-
-        Args: 
-            None
-
-        Returns: 
-            None
-        '''
+        ''' This method downloads the interpolated wavelength to interpolated_wl.npy'''
         logging.info("CHIP.interpolate( )")
 
         start_time = time.perf_counter()
@@ -675,14 +605,7 @@ class CHIP:
 
 
     def load_the_cannon(self):
-        ''' Load in the data The Cannon will use. 
-        
-        Args: 
-            None
-
-        Returns: 
-            None
-        '''
+        ''' Load in the data The Cannon will use.'''
         logging.info("CHIP.load_the_cannon( )") 
 
         self.random_seed = self.config["Training"]["random seed"]["val"]
@@ -1041,9 +964,6 @@ class CHIP:
         
         Args: 
             parameters_df (pd.DataFrame) : contains all the parameters for each star in X_id (in the exact same order)
-
-        Returns: 
-            None
         '''
         logging.debug("CHIP.cannon_splits( )")
 
@@ -1076,14 +996,7 @@ class CHIP:
 
 
     def hyperparameter_tuning(self):
-        ''' Tune the hyperparameters of The Cannon model. This must be ran after self.cannon_splits is ran.
-
-        Args: 
-            None
-
-        Returns:
-            None
-        '''
+        ''' Tune the hyperparameters of The Cannon model. This must be ran after self.cannon_splits is ran.'''
         logging.debug("CHIP.hyperparameter_tuning( )")
 
         # Get the hyperparameters to tune
@@ -1129,9 +1042,6 @@ class CHIP:
         Args: 
             batch_size (int) the 
             poly_order (int)
-
-        Returns: 
-            None
         '''
         logging.debug(f"CHIP.train_best_model( batch_size={batch_size}, poly_order={poly_order}, mask_name={mask_name})")
 
