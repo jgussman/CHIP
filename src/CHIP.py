@@ -603,28 +603,17 @@ class CHIP:
 
         smallest_maxima, largest_minima = self.compute_wavelength_limits(filenames)
 
-        # Sort the regions by their start value
-        sorted_wl_solution = sorted(self.wl_solution, key=lambda x: x[0])
+        # Implement the algorithm
+        last_numbers = self.wl_solution[:,-1]
+        new_array = []
 
-        # Initialize the end of the last region as the end of the first region
-        end_last_region = sorted_wl_solution[0][-1]
+        for i in range(len(last_numbers)-1):
+            next_row = self.wl_solution[i+1]
+            filtered_next_row = next_row[next_row > last_numbers[i]]
+            new_array.extend(filtered_next_row)
 
-        # Initialize a list to hold the new regions
-        new_regions = [sorted_wl_solution[0]]
-
-        # Iterate through the sorted list starting from the second region
-        for region in sorted_wl_solution[1:]:
-            # If the start of this region is before the end of the last region
-            if region[0] < end_last_region:
-                # Update the start of this region to be the end of the last region
-                region[0] = end_last_region
-            # Add this region to the new regions list
-            new_regions.append(region)
-            # Update the end of the last region
-            end_last_region = region[-1]
-
-        # Convert the list of new regions back to a numpy array
-        new_wl_solution = np.array(new_regions)
+        # The new array after operation
+        new_wl_solution = np.array(new_array)
 
         # Mask the wavelength solution
         mask = (new_wl_solution >= largest_minima) & (new_wl_solution <= smallest_maxima)
