@@ -604,7 +604,7 @@ class CHIP:
         smallest_maxima, largest_minima = self.compute_wavelength_limits(filenames)
 
         # Sort the regions by their start value
-        sorted_wl_solution = sorted(wl_solution, key=lambda x: x[0])
+        sorted_wl_solution = sorted(self.wl_solution, key=lambda x: x[0])
 
         # Initialize the end of the last region as the end of the first region
         end_last_region = sorted_wl_solution[0][-1]
