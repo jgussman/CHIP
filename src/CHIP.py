@@ -603,7 +603,9 @@ class CHIP:
         filenames = [os.path.join(self.cross_correlate_dir_path, f) for f in filenames] # add path to each file
         for filename in filenames:
             if not fnmatch(filename, '*_wavelength.npy'):
-                os.remove(os.path.join(dir, filename))
+                # Pop from filenames if it doesn't end with *_wavelength.npy
+                filenames.remove(filename)
+        
 
         smallest_maxima, largest_minima = self.compute_wavelength_limits(filenames)
 
