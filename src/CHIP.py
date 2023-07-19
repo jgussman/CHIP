@@ -640,17 +640,17 @@ class CHIP:
             np.save(new_filename_flux, resampled_flux)
             np.save(new_filename_ivar, resampled_ivar)
             
-            obs_name = os.path.basename(filename).split("_")[0]
-            # Plot the resampled and original spectrum
-            plt.figure(figsize=(10, 6))
-            plt.plot(temp_wv, temp_flux, label='Original Spectrum')
-            plt.plot(common_wv, resampled_flux, label='Resampled Spectrum')
-            plt.xlabel('Wavelength')
-            plt.ylabel('Flux')
-            plt.legend()
-            plt.title(f"Spectrum for {obs_name}")
-            plt.savefig(new_filename_flux.replace("resampled_flux.npy", "comparison.png"))
-            plt.close()
+            # # Plot the resampled and original spectrum
+            # obs_name = os.path.basename(filename).split("_")[0]
+            # plt.figure(figsize=(10, 6))
+            # plt.plot(temp_wv, temp_flux, label='Original Spectrum')
+            # plt.plot(common_wv, resampled_flux, label='Resampled Spectrum')
+            # plt.xlabel('Wavelength')
+            # plt.ylabel('Flux')
+            # plt.legend()
+            # plt.title(f"Spectrum for {obs_name}")
+            # plt.savefig(new_filename_flux.replace("resampled_flux.npy", "comparison.png"))
+            # plt.close()
 
         # Save the common wavelength grid in the new directory
         np.save(os.path.join(self.interpolate_dir_path, "interpolated_wl.npy"), common_wv)
