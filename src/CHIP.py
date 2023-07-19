@@ -1,4 +1,3 @@
-import glob
 import itertools
 import json
 import logging
@@ -6,6 +5,7 @@ import os
 import shutil
 import sys
 import time
+from fnmatch import fnmatch
 
 import joblib
 import matplotlib.pyplot as plt
@@ -599,7 +599,11 @@ class CHIP:
         os.makedirs(self.interpolate_dir_path,exist_ok=True) 
 
         # Grab all the filenames that end with *_wavelength.npy in the cross_correlate_dir_path
-        filenames = glob.glob(self.cross_correlate_dir_path + r"\*_wavelength.npy")
+        filenames = os.listdir(self.cross_correlate_dir_path)
+        filenames = [os.path.join(self.cross_correlate_dir_path, f) for f in filenames] # add path to each file
+        for filename in filenames:
+            if not fnmatch(filename, '*_wavelength.npy'):
+                os.remove(os.path.join(dir, filename))
 
         smallest_maxima, largest_minima = self.compute_wavelength_limits(filenames)
 
