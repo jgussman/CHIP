@@ -30,6 +30,12 @@ The CHIP pipeline is designed to extract stellar parameters from iodine-imprinte
    ```cd CHIP```
 
 
+3. To fetch the submodules, you will need to run the following command:
+
+    ```git submodule update --init --recursive```
+
+    This command will pull all the data from the submodules that you just cloned. The `--init` option initializes the submodules and the `--recursive` option ensures that all submodules are included, even those nested within other submodules.
+
 2. Set up the environment required to use CHIP, using [Anaconda 3](https://www.anaconda.com).
 
     ```conda env create -f install/chip-env.yml```

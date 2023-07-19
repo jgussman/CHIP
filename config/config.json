@@ -10,7 +10,7 @@
         },
         
         "HIRES stars IDs" : {
-            "val": "data/spocs/one_star.txt",
+            "val": "data/spocs/verying_temp_IDs.txt",
             "description": "Path to the file containing a column with a header of 'HIRESID' with the names (using KOA conventions) of the stars you want to use."
         },
 
