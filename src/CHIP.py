@@ -143,7 +143,6 @@ class CHIP:
 
                         self.hires_filename_snr_df = pd.read_csv( os.path.join(self.storage_path, "HIRES_Filename_snr.csv"))
 
-                        print(self.hires_filename_snr_df)
                         if data_folder in ["rv_obs","norm"]:
                             self.load_past_rv_obs( os.path.join(self.storage_path,"rv_obs"))
                     
@@ -623,9 +622,7 @@ class CHIP:
 
         # Interpolate each star's spectrum and ivar onto the common grid
         for filename in filenames:
-            print(f"1. These are the files in inter: {os.listdir(self.interpolate_dir_path)}")
             temp_wv, temp_flux, temp_sigma, resampled_flux, resampled_sigma = self.interpolate_spectrum(filename, common_wv)
-            print(f"2. These are the files in inter: {os.listdir(self.interpolate_dir_path)}")
 
             # Save the resampled flux and ivar in the new directory
             new_filename_flux = filename.replace(self.cross_correlate_dir_path, 
@@ -640,7 +637,6 @@ class CHIP:
 
             np.save(new_filename_flux, resampled_flux)
             np.save(new_filename_ivar, resampled_ivar)
-            print(f"3. These are the files in inter: {os.listdir(self.interpolate_dir_path)}")
             
             # # Plot the resampled and original spectrum
             # obs_name = os.path.basename(filename).split("_")[0]
