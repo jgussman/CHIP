@@ -5,7 +5,7 @@ import os
 import shutil
 import sys
 import time
-from fnmatch import fnmatch
+from glob import glob
 
 import joblib
 import matplotlib.pyplot as plt
@@ -501,7 +501,7 @@ class CHIP:
                                   filename + "_flux.npy")
                     ,specmatch_object.target.s)
             np.save( os.path.join(self.cross_correlate_dir_path,
-                            filename + "_ivar.npy")
+                            filename + "_sigma.npy")
                     ,specmatch_object.target.serr)
             
             ### NEED TO FIGURE OUT WHY MATPLOTLIB GIVES A LOCK ISSUE WHEN MULTIPROCESSING
@@ -561,32 +561,34 @@ class CHIP:
     def interpolate_spectrum(filename, common_wv):
         temp_wv = np.load(filename)
         temp_flux = np.load(filename.replace("wavelength", "flux"))  # assumes a corresponding flux file exists
-        temp_ivar = np.load(filename.replace("wavelength", "ivar"))  # assumes a corresponding ivar file exists
+        temp_sigma = np.load(filename.replace("wavelength", "sigma"))  # assumes a corresponding temp_sigma file exists
 
         # Replace inf and nan values in the flux with 1.0
         temp_flux = np.where(np.isfinite(temp_flux), temp_flux, 1.0)
 
-        interp_kind = 'cubic'
-
+        # Create interpolation functions for the flux and the standard deviation.
+        # These functions will be used to estimate the flux and standard deviation 
+        # values at the points in the new wavelength grid.
         f_flux = interpolate.interp1d(temp_wv, 
                                       temp_flux, 
-                                      kind=interp_kind, 
+                                      kind='cubic', 
                                       bounds_error=False, 
-                                      fill_value=np.nan)
-        f_ivar = interpolate.interp1d(temp_wv, 
-                                      temp_ivar, 
-                                      kind=interp_kind, 
+                                      fill_value=0)
+        
+        # Using linear interpolation for the standard deviation
+        # becauase cubic interpolation was giving np.nan values 
+        # This might need to be fixed in the future
+        f_std = interpolate.interp1d(temp_wv, 
+                                      temp_sigma, 
+                                      kind='linear', 
                                       bounds_error=False, 
-                                      fill_value=np.nan)
+                                      fill_value=np.inf)
         
         resampled_flux = f_flux(common_wv)
-        resampled_ivar = f_ivar(common_wv)
+        resampled_std = f_std(common_wv)
+      
 
-        # Replace nan values with 0.0
-        resampled_flux = np.nan_to_num(resampled_flux)
-        resampled_ivar = np.nan_to_num(resampled_ivar)
-
-        return temp_wv, temp_flux, temp_ivar, resampled_flux, resampled_ivar
+        return temp_wv, temp_flux, temp_sigma, resampled_flux, resampled_std
 
 
     def interpolate(self):  
@@ -598,21 +600,15 @@ class CHIP:
         self.interpolate_dir_path = os.path.join(self.storage_path, "inter")
         os.makedirs(self.interpolate_dir_path,exist_ok=True) 
 
-        # Grab all the filenames that end with *_wavelength.npy in the cross_correlate_dir_path
-        filenames = os.listdir(self.cross_correlate_dir_path)
-        filenames = [os.path.join(self.cross_correlate_dir_path, f) for f in filenames] # add path to each file
-        for filename in filenames:
-            if not fnmatch(filename, '*_wavelength.npy'):
-                # Pop from filenames if it doesn't end with *_wavelength.npy
-                filenames.remove(filename)
-        
-
+        filenames = glob(os.path.join(self.cross_correlate_dir_path, '*_wavelength.npy'))
+  
         smallest_maxima, largest_minima = self.compute_wavelength_limits(filenames)
 
         # Implement the algorithm
         last_numbers = self.wl_solution[:,-1]
         new_array = []
 
+        # Remove overlapping regions of the wavelength solution
         for i in range(len(last_numbers)-1):
             next_row = self.wl_solution[i+1]
             filtered_next_row = next_row[next_row > last_numbers[i]]
@@ -621,13 +617,15 @@ class CHIP:
         # The new array after operation
         new_wl_solution = np.array(new_array)
 
-        # Mask the wavelength solution
+        # Mask the wavelength solution 
         mask = (new_wl_solution >= largest_minima) & (new_wl_solution <= smallest_maxima)
         common_wv = new_wl_solution[mask]
 
         # Interpolate each star's spectrum and ivar onto the common grid
         for filename in filenames:
-            temp_wv, temp_flux, temp_ivar, resampled_flux, resampled_ivar = self.interpolate_spectrum(filename, common_wv)
+            print(f"1. These are the files in inter: {os.listdir(self.interpolate_dir_path)}")
+            temp_wv, temp_flux, temp_sigma, resampled_flux, resampled_sigma = self.interpolate_spectrum(filename, common_wv)
+            print(f"2. These are the files in inter: {os.listdir(self.interpolate_dir_path)}")
 
             # Save the resampled flux and ivar in the new directory
             new_filename_flux = filename.replace(self.cross_correlate_dir_path, 
@@ -637,8 +635,12 @@ class CHIP:
                                                  self.interpolate_dir_path).replace("wavelength.npy", 
                                                                                     "resampled_ivar.npy")
             
+            # Convert sigma to inverse variance
+            resampled_ivar = 1 / (resampled_sigma ** 2)
+
             np.save(new_filename_flux, resampled_flux)
             np.save(new_filename_ivar, resampled_ivar)
+            print(f"3. These are the files in inter: {os.listdir(self.interpolate_dir_path)}")
             
             # # Plot the resampled and original spectrum
             # obs_name = os.path.basename(filename).split("_")[0]
