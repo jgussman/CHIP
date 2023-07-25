@@ -666,14 +666,14 @@ class CHIP:
         interpolated_dir_path = os.path.join(self.data_dir_path, "inter")
 
         # Load wavelength solution
-        self.wl_solution = np.load( os.path.join( interpolated_dir_path , "wl.npy") )
+        self.wl_solution = np.load( os.path.join( interpolated_dir_path , "interpolated_wl.npy") )
 
         # load spectra 
         # Note: the key is hiresid instead of filename 
         hiresid_filenames_array = pd.read_csv( os.path.join( self.data_dir_path,"HIRES_Filename_snr.csv"))[["HIRESID",'FILENAME']].to_numpy()
         for hiresid, filename in hiresid_filenames_array:
-            spec_path = os.path.join( interpolated_dir_path, filename + "_spec.npy" )
-            ivar_path = os.path.join( interpolated_dir_path, filename + "_ivar.npy" )
+            spec_path = os.path.join( interpolated_dir_path, filename + "_resampled_flux.npy" )
+            ivar_path = os.path.join( interpolated_dir_path, filename + "_resampled_ivar.npy" )
             if os.path.exists( spec_path ):
                 if os.path.exists( ivar_path ):
                     self.spectraDic[hiresid] = np.load(spec_path)
