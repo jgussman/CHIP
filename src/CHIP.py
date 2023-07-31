@@ -561,6 +561,8 @@ class CHIP:
         temp_wv = np.load(filename)
         temp_flux = np.load(filename.replace("wavelength", "flux"))  # assumes a corresponding flux file exists
         temp_sigma = np.load(filename.replace("wavelength", "sigma"))  # assumes a corresponding temp_sigma file exists
+        
+        inverse_variance = 1 / (temp_sigma ** 2)
 
         # Replace inf and nan values in the flux with 1.0
         temp_flux = np.where(np.isfinite(temp_flux), temp_flux, 1.0)
@@ -577,17 +579,22 @@ class CHIP:
         # Using linear interpolation for the standard deviation
         # becauase cubic interpolation was giving np.nan values 
         # This might need to be fixed in the future
-        f_std = interpolate.interp1d(temp_wv, 
-                                      temp_sigma, 
+        f_ivar = interpolate.interp1d(temp_wv, 
+                                      inverse_variance, 
                                       kind='linear', 
                                       bounds_error=False, 
                                       fill_value=np.inf)
-        
+
         resampled_flux = f_flux(common_wv)
-        resampled_std = f_std(common_wv)
+        resampled_ivar = f_ivar(common_wv)
+
+        # Replace inf and nan values in the flux with 1.0
+        resampled_flux = np.where(np.isfinite(resampled_flux), resampled_flux, 1.0)
+        # Replace inf and nan values in the standard deviation with 0.0
+        resampled_ivar = np.where(np.isfinite(resampled_ivar), resampled_ivar, 0.0)
       
 
-        return temp_wv, temp_flux, temp_sigma, resampled_flux, resampled_std
+        return temp_wv, temp_flux, temp_sigma, resampled_flux, resampled_ivar
 
 
     def interpolate(self):  
@@ -622,7 +629,7 @@ class CHIP:
 
         # Interpolate each star's spectrum and ivar onto the common grid
         for filename in filenames:
-            temp_wv, temp_flux, temp_sigma, resampled_flux, resampled_sigma = self.interpolate_spectrum(filename, common_wv)
+            temp_wv, temp_flux, temp_sigma, resampled_flux, resampled_ivar = self.interpolate_spectrum(filename, common_wv)
 
             # Save the resampled flux and ivar in the new directory
             new_filename_flux = filename.replace(self.cross_correlate_dir_path, 
@@ -630,10 +637,8 @@ class CHIP:
                                                                                     "resampled_flux.npy")
             new_filename_ivar = filename.replace(self.cross_correlate_dir_path, 
                                                  self.interpolate_dir_path).replace("wavelength.npy", 
-                                                                                    "resampled_ivar.npy")
+                                                                                    "resampled_ivar.npy") 
             
-            # Convert sigma to inverse variance
-            resampled_ivar = 1 / (resampled_sigma ** 2)
 
             np.save(new_filename_flux, resampled_flux)
             np.save(new_filename_ivar, resampled_ivar)
@@ -681,7 +686,7 @@ class CHIP:
                 else:
                     logging.info(f"{filename} does not what an ivar in {interpolated_dir_path}")
             else:
-                logging.info(f"{filename} does not what an spectrum in {interpolated_dir_path}")
+                logging.info(f"{filename} does not have  an spectrum in {interpolated_dir_path}")
         
         logging.info(f"A total of {len(self.spectraDic)} stars were loaded.")
 
@@ -919,6 +924,26 @@ class CHIP:
                 # Split training and validation
                 X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, y_param = self.split_data(X_i, y_i)
 
+                for a in [X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, y_param]:
+                    print(type(a))
+
+                # # TODO: DELETE 
+                if pd.isnull(X_id).any():
+                    print("THERE IS AN NaN in X_id")
+                if pd.isnull(X_spec).any():
+                    print("THERE IS AN NaN in X_spec")                
+                if pd.isnull(X_ivar).any():
+                    print("THERE IS AN NaN in X_ivar")                   
+                if pd.isnull(X_param).any():
+                    print("THERE IS AN NaN in X_param")               
+                if pd.isnull(y_id).any():
+                    print("THERE IS AN NaN in y_id")
+                if pd.isnull(y_spec).any():
+                    print("THERE IS AN NaN in y_spec")   
+                if pd.isnull(y_ivar).any():
+                    print("THERE IS AN NaN in y_ivar")   
+                if pd.isnull(y_param).any():
+                    print("THERE IS AN NaN in y_param")                                                
                 # Mask the spectra and ivars
                 X_spec, X_ivar, y_spec, y_ivar = apply_mask(X_spec, X_ivar, y_spec, y_ivar, self.masks[mask_name])
 
