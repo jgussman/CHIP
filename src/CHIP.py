@@ -923,27 +923,7 @@ class CHIP:
 
                 # Split training and validation
                 X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, y_param = self.split_data(X_i, y_i)
-
-                for a in [X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar, y_param]:
-                    print(type(a))
-
-                # # TODO: DELETE 
-                if pd.isnull(X_id).any():
-                    print("THERE IS AN NaN in X_id")
-                if pd.isnull(X_spec).any():
-                    print("THERE IS AN NaN in X_spec")                
-                if pd.isnull(X_ivar).any():
-                    print("THERE IS AN NaN in X_ivar")                   
-                if pd.isnull(X_param).any():
-                    print("THERE IS AN NaN in X_param")               
-                if pd.isnull(y_id).any():
-                    print("THERE IS AN NaN in y_id")
-                if pd.isnull(y_spec).any():
-                    print("THERE IS AN NaN in y_spec")   
-                if pd.isnull(y_ivar).any():
-                    print("THERE IS AN NaN in y_ivar")   
-                if pd.isnull(y_param).any():
-                    print("THERE IS AN NaN in y_param")                                                
+                                                
                 # Mask the spectra and ivars
                 X_spec, X_ivar, y_spec, y_ivar = apply_mask(X_spec, X_ivar, y_spec, y_ivar, self.masks[mask_name])
 
