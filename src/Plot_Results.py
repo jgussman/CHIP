@@ -26,19 +26,27 @@ inferred_labels = scaler.inverse_transform(inferred_labels)
 param_names = joblib.load( os.path.join(cannon_results_path, "parameters_names.joblib" ))
 
 
-# Remove [ 78,  94, 101, 114, 129] from the inferred labels and y_param
-inferred_labels = np.delete(inferred_labels,[ 78,  94, 101, 114, 129],axis=0)
-y_param = np.delete(y_param,[ 78,  94, 101, 114, 129],axis=0)
+
+# Drop the bad values
+mask = ~np.any(inferred_labels < -30_000,axis=1)
+inferred_labels = inferred_labels[mask]
+y_param = y_param[mask]
 
 
-rice_std = {"Y/H":0.08,"Ni/H":0.04,"Fe/H":0.03,"Mn/H":0.05,"Cr/H":0.04,"V/H":0.06,"Ti/H":0.04,
-"Ca/H":0.03,"Si/H":0.03,"Al/H":0.04,"Mg/H":0.04,"Na/H":0.05,"O/H":0.07,"N/H":0.08,
-"C/H":0.05,"Teff":56,r"$log g$":0.09,r"V sin i":0.87}
 
-brewer_std = {"Y/H":0.015,"Ni/H":0.006,"Fe/H":0.005,"Mn/H":0.01,"Cr/H":0.007,"V/H":0.017,"Ti/H":0.006,
-"Ca/H":0.007,"Si/H":0.004,"Al/H":0.014,"Mg/H":0.006,"Na/H":0.007,"O/H":0.018,"N/H":0.021,
-"C/H":0.013,"Teff":12.5,r"$log g$":0.014,r"V sin i":0.35}
+rice_std = {"Y/H":0.08,"Ni/H":0.04,"Fe/H":0.03,
+            "Mn/H":0.05,"Cr/H":0.04,"V/H":0.06,
+            "Ti/H":0.04,"Ca/H":0.03,"Si/H":0.03,
+            "Al/H":0.04,"Mg/H":0.04,"Na/H":0.05,
+            "O/H":0.07,"N/H":0.08,"C/H":0.05,
+            "Teff":56,r"$log g$":0.09,r"V sin i":0.87}
 
+brewer_std = {"Y/H":0.015,"Ni/H":0.006,"Fe/H":0.005,
+              "Mn/H":0.01,"Cr/H":0.007,"V/H":0.017,
+              "Ti/H":0.006,"Ca/H":0.007,"Si/H":0.004,
+              "Al/H":0.014,"Mg/H":0.006,"Na/H":0.007,
+              "O/H":0.018,"N/H":0.021,"C/H":0.013,
+              "Teff":12.5,r"$log g$":0.014,r"V sin i":0.35}
 
 
 metrics = {"Parameter":[],"mean(Cannon value - SPOCS value)":[]
@@ -69,8 +77,8 @@ for param_i, param  in enumerate(param_names):
             param = r"V sin i"
 
     true_data,predicted_data = y_param[:,param_i],inferred_labels[:,param_i]
+
     sigma = np.std(predicted_data)
-    
     #Save values for table
     param = param.replace('[','').replace(']','')
     metrics["Parameter"].append(param)
@@ -93,9 +101,18 @@ metrics = np.round(metrics,3)
 caption = "The mean values for each stellar parameters along with the relative difference between the SPOC value and the predicted value."
 
 latex_str = metrics.to_latex(index=False,caption=caption)
-latex_str = latex_str.replace("Teff", "$T_{\rm eff}$ ")
-latex_str = latex_str.replace("V sin i", "$v \sin i$ ")
-latex_str = latex_str.replace("\$log g\$", "$\log g$")
+latex_str = latex_str.replace("Teff", r"$T_{\rm eff}$ ")
+latex_str = latex_str.replace("V sin i", r"$v \sin i$ ")
+latex_str = latex_str.replace("\$log g\$", r"$\log g$")
+latex_str = latex_str.replace(r"\\", r"\\ \hline")
+
+latex_str = latex_str.replace("Brewer std", r"$\sigma_{Brewer}$ ")
+latex_str = latex_str.replace("Rice std", r"$\sigma_{Rice}$ ")
+latex_str = latex_str.replace("std(Cannon value - SPOCS value)", r"$\sigma$ ")
+latex_str = latex_str.replace("mean(Cannon value - SPOCS value)", r"Mean Difference ")
+latex_str = latex_str.replace("Relative Difference", r"$(\mu-\mu^*)/\mu$ ")
+latex_str = latex_str.replace("Parameter", "Label ")
+latex_str = latex_str.replace(r"\midrule", "")
 
 print("\n"*5)
 print(latex_str)
