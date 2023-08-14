@@ -1,0 +1,3 @@
+[submodule "specmatch_emp"]
+	path = specmatch_emp
+	url = git@github.com:jgussman/specmatch-emp.git

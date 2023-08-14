@@ -1,14 +1,14 @@
-import numpy as np
+'''AFS implementation from Xu et al. 2019'''
+import os
+
 import alphashape
-from descartes import PolygonPatch
-from astropy.io import fits
 import matplotlib.pyplot as plt
+import numpy as np
 # from localreg import * # If this is uncommented logging will not work
 from astropy.io import fits
-import os 
+from descartes import PolygonPatch
 
 
-# AFS implementation from Xu et al. 2019
 
 def AFS_continuum_norm_1order(wv, spec, sigma, wv_to, spec_to, sigma_to, q=0.95, plot=False):
 
@@ -252,7 +252,7 @@ def plot_alpha_shape_fit(wv, spec, alpha_shape, AS_tilde, W_alpha):
 
 def contfit_alpha_hull(starname, spec_raw, sigma_raw, wv_raw, save_dir, plot=False):
 
-
+    print("Continuum fitting %s" %(starname))
     # Check if the files have already been compute, if they ahve just true 
     spec_norm_name = os.path.join(save_dir, '%s_specnorm.npy' %(starname))
     signma_norm_name = os.path.join(save_dir, '%s_sigmanorm.npy' %(starname))
