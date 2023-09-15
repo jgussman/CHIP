@@ -1,13 +1,20 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import pandas as pd
+import joblib
+import TheCannon
 
 # Read in stellar parameters csv
 stellar_parameters_df = pd.read_csv('data/spocs/stellar_parameters.csv')
 
-# Split the data into training and testing sets
-train_df = stellar_parameters_df.iloc[:int(0.9 * len(stellar_parameters_df))]
-test_df = stellar_parameters_df.iloc[int(0.9 * len(stellar_parameters_df)):]
+# Import training set and test set IDs
+ds = joblib.load(r"data\chip_runs\2023-07-31_23-58-29\training_results\3_0.4_Mean-Error_2\ds.joblib")
+tr_ID = ds.tr_ID
+test_ID = ds.test_ID
+
+# Get all the training set and test set IDs
+train_df = stellar_parameters_df[stellar_parameters_df['HIRESID'].isin(tr_ID)]
+test_df = stellar_parameters_df[stellar_parameters_df['HIRESID'].isin(test_ID)]
 
 # Set up the figure and the subplots
 fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(8, 4), sharey=True, sharex=True)
