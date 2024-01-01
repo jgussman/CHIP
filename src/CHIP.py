@@ -11,7 +11,7 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import specmatchemp.library
+import specmatchemp.library as speclibrary
 from astropy.io import fits
 from hiresprv.auth import login
 from hiresprv.database import Database
@@ -536,7 +536,7 @@ class CHIP:
         # Min wavelength for HIRES wavelength solution is 4976.64...
         # Max wavelength for HIRES wavelength solution is 6421.36...
         # So I'll use 4950 and 6450 as the wavelength limits for the library 
-        self.lib = specmatchemp.library.read_hdf(wavlim=[4950,6450]) 
+        self.lib = speclibrary.read_hdf(wavlim=[4950,6450]) 
 
         Parallel( n_jobs = self.cores )\
                 (delayed( self.cross_correlate_spectrum )\
@@ -787,8 +787,14 @@ class CHIP:
             # Save inferred labels
             joblib.dump(inferred_labels, os.path.join(self.storage_path,'inferred_labels.joblib'))
 
+        # log the standard deviation of the true_labels and the inferred_labels
+        logging.info(f"true_labels std: {np.std(true_labels)}")
+        logging.info(f"inferred_labels std: {np.std(inferred_labels)}")
+        logging.info(f" difference std: {np.std(true_labels-inferred_labels)}")
+        score = self.cost_function(true_labels, inferred_labels)
+        logging.info(f"score: {score}")
 
-        return self.cost_function(true_labels, inferred_labels)
+        return score
         
 
     def split_data(self, X_indecies, y_indecies):
@@ -801,19 +807,19 @@ class CHIP:
         Returns: 
             training id, training spectra, training ivar, training parameters, testing id, testing spectra, testing ivar, testing parameters
         '''
-        # np.array( array , dtype=np.float64) is necessary, otherwise you would recieve the following type error 
+        # np.array( array , dtype=float) is necessary, otherwise you would recieve the following type error 
         # TypeError: No loop matching the specified signature and casting was found for ufunc solve1
         X_id = self.train_id[X_indecies]
-        X_spec = np.array(self.train_spectra[X_indecies], dtype=np.float64)
-        X_ivar = np.array(self.train_ivar[X_indecies], dtype=np.float64)
+        X_spec = np.array(self.train_spectra[X_indecies], dtype=float)
+        X_ivar = np.array(self.train_ivar[X_indecies], dtype=float)
         # Remove 0th column that contains HIRES IDs
-        X_parameters = np.array(self.train_parameter.to_numpy()[X_indecies][:,1:], dtype=np.float64)
+        X_parameters = np.array(self.train_parameter.to_numpy()[X_indecies][:,1:], dtype=float)
 
         y_id = self.train_id[y_indecies]
-        y_spec = np.array(self.train_spectra[y_indecies], dtype=np.float64)
-        y_ivar = np.array(self.train_ivar[y_indecies], dtype=np.float64)
+        y_spec = np.array(self.train_spectra[y_indecies], dtype=float)
+        y_ivar = np.array(self.train_ivar[y_indecies], dtype=float)
         # Remove 0th column that contains HIRES IDs
-        y_parameters = np.array(self.train_parameter.to_numpy()[y_indecies][:,1:], dtype=np.float64)
+        y_parameters = np.array(self.train_parameter.to_numpy()[y_indecies][:,1:], dtype=float)
 
         return X_id, X_spec, X_ivar, X_parameters, y_id, y_spec, y_ivar, y_parameters
 
@@ -874,11 +880,11 @@ class CHIP:
                                              X_id[start:end], X_spec[start:end], X_ivar[start:end], X_param[start:end], 
                                              y_id, y_spec, y_ivar, self.parameters_list)
 
-                # Fit the model on the current batch
                 try:
                     cannon_model.fit(ds)
-                except:
-                    logging.error(f"Error: cannon_model.fit(ds) failed on batch {i}")
+                except Exception as e:
+                    #Unable to allocate 282. KiB for an array with shape (190, 190) and data type float64
+                    logging.error(f"Error: cannon_model.fit(ds) failed on batch {i}. With exception {e}")
                     return cannon_model
 
                 if break_out:
@@ -915,7 +921,7 @@ class CHIP:
             # Store the evaluations
             evaluation_list = []
             # Initialize The Cannon model 
-            
+            logging.info(f"Number of k-folds: {len(self.kfold_train_validation_splits)}")
             for X_i, y_i in self.kfold_train_validation_splits:
 
                 # Initialize new model
@@ -933,9 +939,11 @@ class CHIP:
                 ds = self.initailize_dataset(self.wl_solution,
                                                 X_id, X_spec, X_ivar, X_param, 
                                                 y_id, y_spec, y_ivar, self.parameters_list)
+   
 
                 # Evaluate model
                 evaluation_list.append(self.evaluate_model(cannon_model,ds,y_param))
+                print(f"The current evaluation list is: {evaluation_list}")
             
             # Store the mean evaluation score into a file 
             score = np.mean(evaluation_list)
@@ -953,8 +961,8 @@ class CHIP:
             X_spec, X_ivar, y_spec, y_ivar = apply_mask(X_spec, X_ivar, y_spec, y_ivar, self.masks[mask_name])
 
             # [:,1:] to remove the first column which is the abundance name 
-            X_param = np.array(self.train_parameter.to_numpy()[:,1:], dtype=np.float64) 
-            y_param = np.array(self.test_parameter.to_numpy()[:,1:], dtype=np.float) 
+            X_param = np.array(self.train_parameter.to_numpy()[:,1:], dtype=float) 
+            y_param = np.array(self.test_parameter.to_numpy()[:,1:], dtype=float) 
 
             # Train the model
             cannon_model = mini_batch(cannon_model,batch_size,X_id, X_spec, X_ivar, X_param, y_id, y_spec, y_ivar)
@@ -1073,13 +1081,17 @@ class CHIP:
         hyperparameter_combinations = list(itertools.product(*hyperparameters))
         logging.info("hyperparameter combinations" + str(hyperparameter_combinations))
 
-        # Use joblib to parallelize the hyperparameter tuning
         num_cores = self.config["Training"]["cores"]["val"]
-        results = Parallel(n_jobs=num_cores)\
-                          (delayed(self.train_model)\
-                          (hyperparameter_combination[0],hyperparameter_combination[1],hyperparameter_combination[2]) for hyperparameter_combination in hyperparameter_combinations)
-       
 
+        if num_cores == 1:
+            results = [self.train_model(hyperparameter_combination[0], hyperparameter_combination[1], hyperparameter_combination[2]) 
+                       for hyperparameter_combination in hyperparameter_combinations]
+        else:
+            results = Parallel(n_jobs=num_cores)\
+                      (delayed(self.train_model)\
+                      (hyperparameter_combination[0],hyperparameter_combination[1],hyperparameter_combination[2]) 
+                       for hyperparameter_combination in hyperparameter_combinations)
+        
         # Log the results with the hyperparameters
         for i, hyperparameter_combination in enumerate(hyperparameter_combinations):
             logging.info(f"{hyperparameter_names[0]}={hyperparameter_combination[0]}, {hyperparameter_names[1]}={hyperparameter_combination[1]}, {hyperparameter_names[2]}={hyperparameter_combination[2]}, result={results[i]}")
