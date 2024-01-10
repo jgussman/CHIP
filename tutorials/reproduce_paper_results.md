@@ -1,3 +1,100 @@
 ## Reproduce Results
 
-If you would like to reproduce the results of the paper use the following parameters... *****UPDATE AFTER FINAL RESULTS COME IN
+If you would like to reproduce the results from the paper, you can use the following configuration file. **You will need to change two things in the configuration file after the pre-processing is complete.** You will change the `run` parameter in the `Training` section to the name of the directory inside `data/chip_runs` that was created by the pre-processing. You will also need to change `Pre-processing` section's `run` parameter to `false`.
+```
+{   
+    "Pre-processing": {
+
+        "description": "Arguments for preprocessing.",
+    
+        "run" : { 
+            "val": true,
+            "description": "Do you want to run CHIP (true/false)? If you want to use data from a past run, you need to specify the run's name and what data you want to use from that folder ex: [2022-12-28_22-13-57, rv_obs]."
+        },
+        
+        "HIRES stars IDs" : {
+            "val": "data/spocs/hires_IDs.txt",
+            "description": "Path to the file containing a column with a header of 'HIRESID' with the names (using KOA conventions) of the stars you want to use."
+        },
+
+        "trim spectrum" : {
+            "val": 0,
+            "description": "Remove this many pixels from the left and right edges of EACH echelle order."
+        },
+
+        "cores" : { 
+            "val": -1,
+            "description": "How many cores on your machine would you like to use? -1 for all."
+        }
+
+    }, 
+    
+    "Training":{
+        
+        "description": "Arguments for training.",
+
+        "run" : { 
+            "val": false,
+            "description": "If you want to run The Cannon set val to the name of the dir inside data/chip_runs you want to use (ex: 2022-12-28_22-13-57). Otherwise set to false."
+        },
+
+        "stellar parameters path" : {
+            "val": "data/spocs/stellar_parameters.csv",
+            "description": "Path to the stellar parameters file. The file must have a column named 'HIRESID' with the same names as the cross match stars file."
+        },
+
+        "stellar parameters" : {
+            "val": ['TEFF', 'LOGG', 'VSINI', 'CH', 'NH', 'OH', 'NaH', 'MgH', 'AlH', 'SiH', 'CaH', 'TiH', 'VH', 'CrH', 'MnH', 'FeH', 'NiH', 'YH'],
+            "description": "A list of the stellar parameters you want to train The Cannon on. The names need to reflect the spelling in stellar parameters path"
+        },
+
+        "cores" : { 
+            "val": 1,
+            "description": "How many cores on your machine would you like to use? -1 for all."
+        },
+
+        "random seed" : { 
+            "val": 3,
+            "description": "Random seed for reproducability."
+        },
+
+        "train test split" :{
+            "val": 0.4,
+            "description": "what fraction of the data set do you want to use for testing (ex: 0.4, 60% of the data set will be used for training, and 40% will be used for testing the best model)"
+        },
+
+        "cost function" : {
+            "name": "Mean Error",
+            "function" : "lambda true_array,predicted_array:  np.mean( true_array - predicted_array )",
+            "description" : "A lambda function and associated name of function, for computing the cost of a model."
+        },
+
+        "masks" : {
+            "val" : [ ["None",false]],
+            "description" : "List of masks to apply to all stars; for example: [['Name of Mask','file path to mask'],...,['None',False]]; shape of mask = (data/spocs/wl_solution.npy.shape[0],)"
+        },
+
+        "epochs" : {
+            "val" : 1,
+            "description" : "number of epochs to train the model for"
+        },
+        
+        "kfolds" : {
+            "val" : 2,
+            "description" : "number of folds for kfold cross validation"
+        },
+
+        "batch size" : {
+            "val" : [1000],
+            "description" : "number of batches to split the training set into for mini-batch training"
+        },
+
+        "poly order" : {
+            "val" : [2],
+            "description" : "What degree polynomials do you want The Cannon to try to fit to the data? ex: [1,2]"
+        }
+
+    }
+
+}
+```
